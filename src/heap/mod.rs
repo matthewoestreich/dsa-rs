@@ -33,7 +33,7 @@ where
             },
             leaf: None,
         };
-        if !this.nodes.is_empty() {
+        if !this.is_empty() {
             this.fix();
         }
         this
