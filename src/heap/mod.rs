@@ -241,7 +241,7 @@ mod test {
 
         // Test sort
         let sorted = heap.sort();
-        let sorted_vals: Vec<_> = sorted.clone().iter().map(|foo| foo.id).collect();
+        let sorted_vals: Vec<_> = sorted.iter().map(|foo| foo.id).collect();
         assert_eq!(
             sorted, heap.nodes,
             "sorting did not change nodes! expected={sorted:?} | got={:?}",
