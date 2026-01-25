@@ -243,10 +243,10 @@ where
 
     /// Compares children of element at `parent_index` and chooses one of them based up `comparator` result.
     /// - If no children, returns `None`.
-    /// - If only one child, return that child.
+    /// - If only one child, returns `Some(that_child_index)`.
     /// - Otherwise, calls the comparator using left child as `a` and right child as `b`..
     ///    - If `a` is `ComparatorResult::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
-    fn pick_child_of(&self, parent_index: usize) -> Option<usize> {
+    fn select_child_index(&self, parent_index: usize) -> Option<usize> {
         let has_left_child = self.has_left_child(parent_index);
         let has_right_child = self.has_right_child(parent_index);
 
@@ -316,7 +316,7 @@ where
 
     pub(crate) fn heapify_down(&mut self, start_index: usize) {
         let mut parent_index = start_index;
-        while let Some(child_index) = self.pick_child_of(parent_index)
+        while let Some(child_index) = self.select_child_index(parent_index)
             && self.should_swap(parent_index, child_index)
         {
             self.swap(parent_index, child_index);
