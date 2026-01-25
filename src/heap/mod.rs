@@ -211,32 +211,6 @@ mod test {
     }
 
     #[test]
-    fn test_heapify_down() {
-        let comparator = |a: &i32, b: &i32| -> ComparatorResult {
-            let r = a - b;
-            if r == 0 {
-                ComparatorResult::Equal
-            } else if r > 0 {
-                ComparatorResult::Greater
-            } else {
-                ComparatorResult::Less
-            }
-        };
-
-        let values = vec![50, 80, 30, 90, 60, 40, 20];
-        let values_clone = values.clone();
-        let mut heap = Heap::new(comparator, Some(values));
-
-        println!(
-            "are they equal?\n\tvalues={:?}\n\theap.nodes={:?}\n",
-            values_clone, heap.nodes
-        );
-        println!("before={:?}", heap.nodes);
-        heap.heapify_up(2);
-        println!("after={:?}", heap.nodes);
-    }
-
-    #[test]
     fn test_min_heap() {
         let comparator = |a: &Foo, b: &Foo| -> ComparatorResult {
             use ComparatorResult::*;
