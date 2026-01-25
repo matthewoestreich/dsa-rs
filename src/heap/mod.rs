@@ -89,7 +89,7 @@ where
         right_child_index < self.nodes.len()
     }
 
-    fn compare_children_of(&self, parent_index: usize) -> Option<usize> {
+    fn pick_child_of(&self, parent_index: usize) -> Option<usize> {
         if !self.has_left_child(parent_index) && !self.has_right_child(parent_index) {
             return None;
         }
@@ -103,7 +103,7 @@ where
         })
     }
 
-    fn compare_children_before(
+    fn pick_child_before(
         &self,
         index: usize,
         left_child_index: usize,
@@ -149,7 +149,7 @@ where
 
     pub(crate) fn heapify_down(&mut self, start_index: usize) {
         let mut parent_index = start_index;
-        while let Some(child_index) = self.compare_children_of(parent_index) {
+        while let Some(child_index) = self.pick_child_of(parent_index) {
             if !self.should_swap(parent_index, child_index) {
                 break;
             }
@@ -164,8 +164,7 @@ where
         let mut right_child_index = 2;
 
         while left_child_index < index {
-            let child_index =
-                self.compare_children_before(index, left_child_index, right_child_index);
+            let child_index = self.pick_child_before(index, left_child_index, right_child_index);
 
             if self.should_swap(parent_index, child_index) {
                 self.swap(parent_index, child_index);
