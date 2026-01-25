@@ -109,9 +109,11 @@ where
         left_child_index: usize,
         right_child_index: usize,
     ) -> usize {
-        if let ComparatorResult::Less | ComparatorResult::Equal =
-            self.compare_at(right_child_index, left_child_index)
-            && right_child_index < index
+        if right_child_index < index
+            && matches!(
+                self.compare_at(right_child_index, left_child_index),
+                ComparatorResult::Less | ComparatorResult::Equal
+            )
         {
             right_child_index
         } else {
@@ -159,26 +161,16 @@ where
         let mut parent_index = 0;
         let mut left_child_index = 1;
         let mut right_child_index = 2;
-        #[allow(unused_assignments)]
-        let mut child_index = None;
 
         while left_child_index < index {
-            child_index =
-                Some(self.compare_children_before(index, left_child_index, right_child_index));
+            let child_index =
+                self.compare_children_before(index, left_child_index, right_child_index);
 
-            match child_index {
-                Some(index) => {
-                    if self.should_swap(parent_index, index) {
-                        self.swap(parent_index, index);
-                    }
-                }
-                None => {
-                    eprintln!("child_index is None and it shouldn't be!");
-                    break;
-                }
+            if self.should_swap(parent_index, child_index) {
+                self.swap(parent_index, child_index);
             }
 
-            parent_index = child_index.unwrap_or(0);
+            parent_index = child_index;
             left_child_index = (parent_index * 2) + 1;
             right_child_index = (parent_index * 2) + 2;
         }
