@@ -44,11 +44,17 @@ where
         }
     }
 
-    pub fn sort(&mut self) -> Vec<T> {
+    /// Sorts heap data in place.
+    pub fn sort(&mut self) {
         for i in (0..self.nodes.len()).rev() {
             self.swap(0, i);
             self.heapify_down_until(i);
         }
+    }
+
+    /// Sorts in place as well as returns copy of sorted data.
+    pub fn to_sorted(&mut self) -> Vec<T> {
+        self.sort();
         self.nodes.clone()
     }
 
@@ -239,7 +245,7 @@ mod test {
         );
 
         // Test sort
-        let sorted = heap.sort();
+        let sorted = heap.to_sorted();
         let sorted_vals: Vec<_> = sorted.iter().map(|foo| foo.id).collect();
         assert_eq!(
             sorted, heap.nodes,
