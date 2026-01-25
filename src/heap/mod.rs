@@ -376,6 +376,26 @@ mod test {
     }
 
     #[test]
+    fn test_extract_root_on_empty_heap() {
+        let mut heap = Heap::new(
+            |a: &i32, b: &i32| -> ComparatorResult {
+                let r = a - b;
+                if r == 0 {
+                    ComparatorResult::Equal
+                } else if r > 0 {
+                    ComparatorResult::Greater
+                } else {
+                    ComparatorResult::Less
+                }
+            },
+            None,
+        );
+        heap.clear();
+        let root = heap.extract_root();
+        assert_eq!(root, None);
+    }
+
+    #[test]
     fn test_min_heap() {
         let comparator = |a: &Foo, b: &Foo| -> ComparatorResult {
             use ComparatorResult::*;
