@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum ComparatorResult {
     Greater,
@@ -7,24 +9,28 @@ pub enum ComparatorResult {
 
 pub struct Heap<T, F>
 where
-    T: Copy,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> ComparatorResult,
 {
     comparator: F,
-    pub(crate) nodes: Vec<T>,
+    pub(crate) nodes: VecDeque<T>,
     pub(crate) leaf: Option<T>,
 }
 
 #[allow(dead_code)]
 impl<T, F> Heap<T, F>
 where
-    T: Copy,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> ComparatorResult,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
             comparator,
-            nodes: values.unwrap_or_default(),
+            nodes: if let Some(vals) = values {
+                VecDeque::from(vals)
+            } else {
+                VecDeque::new()
+            },
             leaf: None,
         };
         if !this.nodes.is_empty() {
@@ -33,9 +39,10 @@ where
         this
     }
 
+    /// Pushes a value in the heap.
     pub fn insert(&mut self, value: T) {
-        self.nodes.push(value);
-        self.heapify_up(self.nodes.len() - 1);
+        self.nodes.push_back(value);
+        self.heapify_up(self.size() - 1);
         if self
             .leaf
             .is_none_or(|leaf| (self.comparator)(&value, &leaf) == ComparatorResult::Greater)
@@ -44,9 +51,58 @@ where
         }
     }
 
+    /// Alias for insert.
+    pub fn push(&mut self, value: T) {
+        self.insert(value);
+    }
+
+    /// Removes and returns root node.
+    pub fn extract_root(&mut self) -> Option<T> {
+        let root_opt = self.nodes.swap_remove_back(0);
+        self.heapify_down(0);
+
+        if let Some(root) = root_opt
+            && let Some(leaf) = self.leaf
+            && root == leaf
+        {
+            self.leaf = None;
+        }
+
+        root_opt
+    }
+
+    /// Alias for extract_root.
+    pub fn pop(&mut self) -> Option<T> {
+        self.extract_root()
+    }
+
+    /// Returns a copy of the root node.
+    pub fn root(&self) -> Option<T> {
+        self.nodes.front().cloned()
+    }
+
+    /// Alias for 'root' method.
+    pub fn top(&self) -> Option<T> {
+        self.root()
+    }
+
+    pub fn clear(&mut self) {
+        self.nodes = VecDeque::new();
+        self.leaf = None;
+    }
+
+    /// Returns number of nodes in heap.
+    pub fn size(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+
     /// Sorts heap data in place.
     pub fn sort(&mut self) {
-        for i in (0..self.nodes.len()).rev() {
+        for i in (0..self.size()).rev() {
             self.swap(0, i);
             self.heapify_down_until(i);
         }
@@ -55,14 +111,16 @@ where
     /// Sorts in place as well as returns copy of sorted data.
     pub fn to_sorted(&mut self) -> Vec<T> {
         self.sort();
-        self.nodes.clone()
+        Vec::from(self.nodes.clone())
     }
 
+    /// Checks if heap is valid.
     pub fn is_valid(&self) -> bool {
-        self.is_valid_from_index(0)
+        self.is_valid_from(0)
     }
 
-    fn is_valid_from_index(&self, parent_index: usize) -> bool {
+    /// Recursively checks if the heap is valid, starting from specified parent index.
+    fn is_valid_from(&self, parent_index: usize) -> bool {
         let mut is_valid_left = true;
         let mut is_valid_right = true;
 
@@ -71,7 +129,7 @@ where
             if self.compare_at(parent_index, left_child_index) == ComparatorResult::Greater {
                 return false;
             }
-            is_valid_left = self.is_valid_from_index(left_child_index);
+            is_valid_left = self.is_valid_from(left_child_index);
         }
 
         if self.has_right_child(parent_index) {
@@ -79,7 +137,7 @@ where
             if self.compare_at(parent_index, right_child_index) == ComparatorResult::Greater {
                 return false;
             }
-            is_valid_right = self.is_valid_from_index(right_child_index);
+            is_valid_right = self.is_valid_from(right_child_index);
         }
 
         is_valid_left && is_valid_right
@@ -87,21 +145,30 @@ where
 
     fn has_left_child(&self, parent_index: usize) -> bool {
         let left_child_index = (parent_index * 2) + 1;
-        left_child_index < self.nodes.len()
+        left_child_index < self.size()
     }
 
     fn has_right_child(&self, parent_index: usize) -> bool {
         let right_child_index = (parent_index * 2) + 2;
-        right_child_index < self.nodes.len()
+        right_child_index < self.size()
     }
 
     fn pick_child_of(&self, parent_index: usize) -> Option<usize> {
-        if !self.has_left_child(parent_index) && !self.has_right_child(parent_index) {
+        let has_left = self.has_left_child(parent_index);
+        let has_right = self.has_right_child(parent_index);
+        if !has_left && !has_right {
             return None;
         }
 
         let left_child_index = (parent_index * 2) + 1;
         let right_child_index = (parent_index * 2) + 2;
+
+        if !has_left {
+            return Some(right_child_index);
+        }
+        if !has_right {
+            return Some(left_child_index);
+        }
 
         Some(match self.compare_at(left_child_index, right_child_index) {
             ComparatorResult::Greater => right_child_index,
@@ -136,7 +203,7 @@ where
     }
 
     fn should_swap(&self, parent_index: usize, child_index: usize) -> bool {
-        if parent_index >= self.nodes.len() || child_index >= self.nodes.len() {
+        if parent_index >= self.size() || child_index >= self.size() {
             return false;
         }
         self.compare_at(parent_index, child_index) == ComparatorResult::Greater
@@ -170,7 +237,6 @@ where
 
         while left_child_index < index {
             let child_index = self.pick_child_before(index, left_child_index, right_child_index);
-
             if self.should_swap(parent_index, child_index) {
                 self.swap(parent_index, child_index);
             }
@@ -183,12 +249,12 @@ where
 
     fn fix(&mut self) {
         // Fix node positions.
-        for i in (0..=((self.nodes.len() as f32 / 2f32) - 1f32).floor() as i32).rev() {
+        for i in (0..=((self.size() as f32 / 2f32) - 1f32).floor() as i32).rev() {
             self.heapify_down(i as usize);
         }
 
         // Fix leaf
-        for i in (self.nodes.len() as f32 / 2f32).floor() as usize..self.nodes.len() {
+        for i in (self.size() as f32 / 2f32).floor() as usize..self.size() {
             let value = self.nodes[i];
             if self
                 .leaf
@@ -238,17 +304,18 @@ mod test {
         }
         assert_eq!(
             values.len(),
-            heap.nodes.len(),
-            "expected values.len ({}) to == heap.nodes.len ({})",
+            heap.size(),
+            "expected values.len ({}) to == heap.size() ({})",
             values.len(),
-            heap.nodes.len()
+            heap.size()
         );
 
         // Test sort
         let sorted = heap.to_sorted();
         let sorted_vals: Vec<_> = sorted.iter().map(|foo| foo.id).collect();
         assert_eq!(
-            sorted, heap.nodes,
+            sorted,
+            Vec::from(heap.nodes.clone()),
             "sorting did not change nodes! expected={sorted:?} | got={:?}",
             heap.nodes
         );
@@ -273,5 +340,25 @@ mod test {
             "expected leaf id to be 90! got {:?}",
             heap.leaf.expect("exist")
         );
+
+        // Test root value
+        let root_node = heap.root().expect("exist");
+        assert_eq!(root_node, Foo::new(20));
+
+        // Test size
+        assert_eq!(heap.size(), values.len());
+
+        // Test is_empty
+        assert!(!heap.is_empty());
+
+        // Test extract_root
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(20));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(30));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(40));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(50));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(60));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(80));
+        assert_eq!(heap.extract_root().expect("exist"), Foo::new(90));
+        assert!(heap.is_empty());
     }
 }
