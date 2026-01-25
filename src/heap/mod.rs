@@ -45,11 +45,9 @@ where
     }
 
     pub fn sort(&mut self) -> Vec<T> {
-        let mut i = self.nodes.len() - 1;
-        while i > 0 {
+        for i in (0..self.nodes.len()).rev() {
             self.swap(0, i);
             self.heapify_down_until(i);
-            i -= 1;
         }
         self.nodes.clone()
     }
@@ -188,23 +186,19 @@ where
 
     fn fix(&mut self) {
         // Fix node positions.
-        let mut i = ((self.nodes.len() as f32 / 2f32) - 1f32).floor() as i32;
-        while i >= 0 {
+        for i in (0..=((self.nodes.len() as f32 / 2f32) - 1f32).floor() as i32).rev() {
             self.heapify_down(i as usize);
-            i -= 1;
         }
 
         // Fix leaf
-        let mut j = (self.nodes.len() as f32 / 2f32).floor() as usize;
-        while j < self.nodes.len() {
-            let value = self.nodes[j];
+        for i in (self.nodes.len() as f32 / 2f32).floor() as usize..self.nodes.len() {
+            let value = self.nodes[i];
             if self
                 .leaf
                 .is_none_or(|leaf| (self.comparator)(&value, &leaf) == ComparatorResult::Greater)
             {
                 self.leaf = Some(value);
             }
-            j += 1;
         }
     }
 }
