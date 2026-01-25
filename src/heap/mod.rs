@@ -1,4 +1,7 @@
-use std::collections::VecDeque;
+use std::{
+    collections::VecDeque,
+    fmt::{Debug, Display},
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ComparatorResult {
@@ -7,21 +10,90 @@ pub enum ComparatorResult {
     Equal,
 }
 
+#[derive(Clone)]
 pub struct Heap<T, F>
 where
     T: Copy + PartialEq + Eq,
-    F: Fn(&T, &T) -> ComparatorResult,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
 {
     comparator: F,
     pub(crate) nodes: VecDeque<T>,
     pub(crate) leaf: Option<T>,
 }
 
+impl<T, F> Debug for Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Heap")
+            .field("nodes", &self.nodes)
+            .field("leaf", &self.leaf)
+            .finish()
+    }
+}
+
+impl<T, F> Display for Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl<T, F> PartialEq for Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.nodes == other.nodes && self.leaf == other.leaf
+    }
+}
+
+impl<T, F> Eq for Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+}
+
+/// Immutable iteration.
+impl<'a, T, F> IntoIterator for &'a Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+    type Item = &'a T;
+    type IntoIter = std::collections::vec_deque::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.iter()
+    }
+}
+
+/// Consuming iteration.
+impl<T, F> IntoIterator for Heap<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
+{
+    type Item = T;
+    type IntoIter = std::collections::vec_deque::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.into_iter()
+    }
+}
+
 #[allow(dead_code)]
 impl<T, F> Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
-    F: Fn(&T, &T) -> ComparatorResult,
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> ComparatorResult + Clone,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
@@ -86,6 +158,11 @@ where
         self.root()
     }
 
+    /// Returns leaf (or last node) in heap.
+    pub fn leaf(&self) -> Option<T> {
+        self.leaf
+    }
+
     pub fn clear(&mut self) {
         self.nodes = VecDeque::new();
         self.leaf = None;
@@ -98,6 +175,17 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.nodes.iter()
+    }
+
+    /// Use in place of iter_mut.
+    /// Temporarily gives mutable access to each node and automatically fixes the heap afterward.
+    pub fn for_each_mut(&mut self, f: impl FnMut(&mut T)) {
+        self.nodes.iter_mut().for_each(f);
+        self.fix();
     }
 
     /// Sorts heap data in place.
@@ -153,6 +241,11 @@ where
         right_child_index < self.size()
     }
 
+    /// Compares children of element at `parent_index` and chooses one of them based up `comparator` result.
+    /// - If no children, returns `None`.
+    /// - If only one child, return that child.
+    /// - Otherwise, calls the comparator using left child as `a` and right child as `b`..
+    ///    - If `a` is `ComparatorResult::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
     fn pick_child_of(&self, parent_index: usize) -> Option<usize> {
         let has_left = self.has_left_child(parent_index);
         let has_right = self.has_right_child(parent_index);
@@ -160,12 +253,12 @@ where
             return None;
         }
 
-        let left_child_index = (parent_index * 2) + 1;
         let right_child_index = (parent_index * 2) + 2;
-
-        if !has_left {
+        if !self.has_left_child(parent_index) {
             return Some(right_child_index);
         }
+
+        let left_child_index = (parent_index * 2) + 1;
         if !has_right {
             return Some(left_child_index);
         }
@@ -270,7 +363,7 @@ where
 mod test {
     use super::*;
 
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct Foo {
         id: i32,
     }
@@ -345,11 +438,52 @@ mod test {
         let root_node = heap.root().expect("exist");
         assert_eq!(root_node, Foo::new(20));
 
+        // Test leaf value
+        let leaf_node = heap.leaf().expect("some");
+        assert_eq!(leaf_node, Foo::new(90));
+
         // Test size
         assert_eq!(heap.size(), values.len());
 
         // Test is_empty
         assert!(!heap.is_empty());
+
+        // Test clone
+        let heap_clone = heap.clone();
+        assert!(heap.eq(&heap_clone));
+
+        // Test immutable iteration
+        let mut collected: Vec<_> = vec![]; // OR : (&heap).into_iter().copied().collect();
+        for &el in heap.iter() {
+            collected.push(el);
+        }
+        assert_eq!(Vec::from(heap.nodes.clone()), collected);
+        collected.sort();
+        let mut collected_vals = values.iter().map(|&v| Foo::new(v)).collect::<Vec<_>>();
+        collected_vals.sort();
+        assert_eq!(collected, collected_vals);
+
+        // Test mutable iteration.
+        let multiplyer = 10;
+        let mut heap_clone_for_mut_iter = heap.clone();
+        let mut vals_clone = values
+            .clone()
+            .iter()
+            .map(|&v| Foo::new(v * multiplyer))
+            .collect::<Vec<_>>();
+        heap_clone_for_mut_iter.for_each_mut(|el| el.id *= multiplyer);
+        vals_clone.sort();
+        let mut heap_nodes_vec = Vec::from(heap_clone_for_mut_iter.nodes.clone());
+        heap_nodes_vec.sort();
+        assert_eq!(vals_clone, heap_nodes_vec);
+
+        // Test consuming iterator.
+        let heap_consume_clone = heap.clone();
+        let mut consumed: Vec<_> = heap_consume_clone.into_iter().collect();
+        consumed.sort();
+        let mut consumed_vals: Vec<_> = values.clone().iter().map(|&v| Foo::new(v)).collect();
+        consumed_vals.sort();
+        assert_eq!(consumed, consumed_vals);
 
         // Test extract_root
         assert_eq!(heap.extract_root().expect("exist"), Foo::new(20));
