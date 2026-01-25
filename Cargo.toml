@@ -1,0 +1,10 @@
+[package]
+name = "dsa-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[[bin]]
+name = "dsa"
+path = "bin/main.rs"
