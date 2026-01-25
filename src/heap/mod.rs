@@ -247,19 +247,20 @@ where
     /// - Otherwise, calls the comparator using left child as `a` and right child as `b`..
     ///    - If `a` is `ComparatorResult::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
     fn pick_child_of(&self, parent_index: usize) -> Option<usize> {
-        let has_left = self.has_left_child(parent_index);
-        let has_right = self.has_right_child(parent_index);
-        if !has_left && !has_right {
+        let has_left_child = self.has_left_child(parent_index);
+        let has_right_child = self.has_right_child(parent_index);
+
+        if !has_left_child && !has_right_child {
             return None;
         }
 
         let right_child_index = (parent_index * 2) + 2;
-        if !self.has_left_child(parent_index) {
+        if !has_left_child {
             return Some(right_child_index);
         }
 
         let left_child_index = (parent_index * 2) + 1;
-        if !has_right {
+        if !has_right_child {
             return Some(left_child_index);
         }
 
