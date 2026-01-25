@@ -149,10 +149,9 @@ where
 
     pub(crate) fn heapify_down(&mut self, start_index: usize) {
         let mut parent_index = start_index;
-        while let Some(child_index) = self.pick_child_of(parent_index) {
-            if !self.should_swap(parent_index, child_index) {
-                break;
-            }
+        while let Some(child_index) = self.pick_child_of(parent_index)
+            && self.should_swap(parent_index, child_index)
+        {
             self.swap(parent_index, child_index);
             parent_index = child_index;
         }
