@@ -1,30 +1,107 @@
-use crate::heap::{ComparatorResult, Heap};
+use crate::heap::Heap;
 
-use std::fmt::Debug;
+use std::{
+    cmp::Ordering,
+    collections::vec_deque,
+    fmt::{Debug, Display},
+};
 
 pub struct PriorityQueue<T, F>
 where
     T: Copy + PartialEq + Eq,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     heap: Heap<T, F>,
+}
+
+impl<T, F> Debug for PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PriorityQueue")
+            .field("heap", &self.heap)
+            .finish()
+    }
+}
+
+impl<T, F> Display for PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl<T, F> PartialEq for PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.heap == other.heap
+    }
+}
+
+impl<T, F> Eq for PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+}
+
+/// Immutable iteration.
+impl<'a, T, F> IntoIterator for &'a PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    type Item = &'a T;
+    type IntoIter = vec_deque::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.heap).into_iter()
+    }
+}
+
+/// Consuming iteration.
+impl<T, F> IntoIterator for PriorityQueue<T, F>
+where
+    T: Copy + PartialEq + Eq + Debug,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    type Item = T;
+    type IntoIter = vec_deque::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.heap.into_iter()
+    }
 }
 
 impl<T, F> PriorityQueue<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
         Self {
-            heap: Heap::new(comparator.clone(), values),
+            heap: Heap::new(comparator, values),
         }
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.heap.iter()
+    }
+
+    /// Returns a copy of the element with highest priority.
     pub fn front(&self) -> Option<T> {
         self.heap.root()
     }
 
+    /// Returns a copy of the element with lowest priority.
     pub fn back(&self) -> Option<T> {
         self.heap.leaf()
     }
@@ -48,56 +125,49 @@ where
         self.dequeue()
     }
 
-    /// Removes and returns elements that satisfy condition in callback.
-    pub fn remove_if<CB>(&mut self, callback: CB) -> Vec<T>
+    /// Retains elements for which `predicate` returns true.
+    /// Returns the elements that were removed.
+    /// The relative order of returned elements is unspecified.
+    pub fn drain_filter<P>(&mut self, mut predicate: P) -> Vec<T>
     where
-        CB: Fn(&T) -> bool,
+        P: FnMut(&T) -> bool,
     {
         let mut removed = Vec::new();
-        let mut dequeued = Vec::new();
+        let mut retained = Vec::new();
 
         while let Some(popped) = self.pop() {
-            if (callback)(&popped) {
-                removed.push(popped);
+            if (predicate)(&popped) {
+                retained.push(popped);
             } else {
-                dequeued.push(popped);
+                removed.push(popped);
             }
         }
 
-        dequeued.iter().for_each(|&t| self.push(t));
+        for t in retained {
+            self.push(t);
+        }
+
         removed
     }
 
-    /// Checks every element in queue against a callback,
-    /// if any of the elements meet the provided criterea,
-    /// we return true.
-    pub fn every<CB>(&mut self, callback: CB) -> bool
+    /// Shorthand for `self.iter().any(...)`
+    pub fn any<P>(&self, predicate: P) -> bool
     where
-        CB: Fn(&T) -> bool,
+        P: FnMut(&T) -> bool,
     {
-        let mut dequeued = Vec::new();
-
-        while let Some(popped) = self.pop() {
-            dequeued.push(popped);
-            if (callback)(&popped) {
-                return true;
-            }
-        }
-
-        dequeued.iter().for_each(|&t| self.push(t));
-        false
+        self.heap.iter().any(predicate)
     }
 
     pub fn size(&self) -> usize {
         self.heap.size()
     }
 
-    /// Returns sorted array of elements from
-    /// highest priority to lowest priority
-    pub fn to_vec(&self) -> Vec<T> {
+    /// Returns a copy of underlying heap as sorted `Vec` of elements.
+    /// Elements are sorted from highest priority to lowest priority.
+    pub fn to_sorted_vec(&self) -> Vec<T> {
         let mut heap_clone = self.heap.clone();
         heap_clone.sort();
-        heap_clone.clone_heap_data()
+        heap_clone.take_heap_data()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -122,18 +192,8 @@ mod test {
 
     #[test]
     fn test_priority_queue_with_min_logic() {
-        let mut min_queue = PriorityQueue::new(
-            |a: &Foo, b: &Foo| -> ComparatorResult {
-                if a.id == b.id {
-                    ComparatorResult::Equal
-                } else if a.id < b.id {
-                    ComparatorResult::Less
-                } else {
-                    ComparatorResult::Greater
-                }
-            },
-            None,
-        );
+        let comparator = |a: &Foo, b: &Foo| a.id.cmp(&b.id);
+        let mut min_queue = PriorityQueue::new(comparator, None);
 
         let values = vec![50, 80, 30, 90, 60, 40, 20];
 
@@ -143,9 +203,9 @@ mod test {
 
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
-        let min_queue_vals_to_vec: Vec<_> = min_queue.to_vec().iter().map(|t| t.id).collect();
-        values_clone_to_vec.sort();
-        values_clone_to_vec.reverse();
+        let min_queue_vals_to_vec: Vec<_> =
+            min_queue.to_sorted_vec().iter().map(|t| t.id).collect();
+        values_clone_to_vec.sort_by(|a, b| b.cmp(a));
         assert_eq!(values_clone_to_vec, min_queue_vals_to_vec);
 
         // Test front
@@ -153,7 +213,12 @@ mod test {
         assert_eq!(front, Foo::new(20));
 
         // Test every
-        let does_contain = min_queue.every(|e| e.id > 50);
+        let does_contain = min_queue.any(|e| e.id > 50);
         assert!(does_contain);
+
+        let removed = min_queue.drain_filter(|e| e.id == 20);
+        assert_eq!(removed.len(), values.len() - 1);
+        assert_eq!(min_queue.to_sorted_vec(), vec![Foo::new(20)]);
+        assert_eq!(min_queue.size(), 1);
     }
 }

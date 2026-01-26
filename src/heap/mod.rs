@@ -1,22 +1,16 @@
 use std::{
-    collections::VecDeque,
+    cmp::Ordering,
+    collections::{VecDeque, vec_deque},
     fmt::{Debug, Display},
 };
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ComparatorResult {
-    Greater,
-    Less,
-    Equal,
-}
 
 #[derive(Clone)]
 pub struct Heap<T, F>
 where
     T: Copy + PartialEq + Eq,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
-    pub(crate) nodes: VecDeque<T>,
+    nodes: VecDeque<T>,
     comparator: F,
     leaf: Option<T>,
 }
@@ -24,7 +18,7 @@ where
 impl<T, F> Debug for Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Heap")
@@ -37,7 +31,7 @@ where
 impl<T, F> Display for Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -47,7 +41,7 @@ where
 impl<T, F> PartialEq for Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn eq(&self, other: &Self) -> bool {
         self.nodes == other.nodes && self.leaf == other.leaf
@@ -57,7 +51,7 @@ where
 impl<T, F> Eq for Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
 }
 
@@ -65,10 +59,10 @@ where
 impl<'a, T, F> IntoIterator for &'a Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
-    type IntoIter = std::collections::vec_deque::Iter<'a, T>;
+    type IntoIter = vec_deque::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.iter()
@@ -79,30 +73,25 @@ where
 impl<T, F> IntoIterator for Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
-    type IntoIter = std::collections::vec_deque::IntoIter<T>;
+    type IntoIter = vec_deque::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.into_iter()
     }
 }
 
-#[allow(dead_code)]
 impl<T, F> Heap<T, F>
 where
     T: Copy + PartialEq + Eq + Debug,
-    F: Fn(&T, &T) -> ComparatorResult + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
             comparator,
-            nodes: if let Some(vals) = values {
-                VecDeque::from(vals)
-            } else {
-                VecDeque::new()
-            },
+            nodes: VecDeque::from(values.unwrap_or_default()),
             leaf: None,
         };
         if !this.is_empty() {
@@ -117,7 +106,7 @@ where
         self.heapify_up(self.size() - 1);
         if self
             .leaf
-            .is_none_or(|leaf| (self.comparator)(&value, &leaf) == ComparatorResult::Greater)
+            .is_none_or(|leaf| (self.comparator)(&value, &leaf) == Ordering::Greater)
         {
             self.leaf = Some(value);
         }
@@ -150,7 +139,7 @@ where
 
     /// Returns a copy of the root node.
     pub fn root(&self) -> Option<T> {
-        self.nodes.front().cloned()
+        self.nodes.front().copied()
     }
 
     /// Alias for 'root' method.
@@ -158,7 +147,12 @@ where
         self.root()
     }
 
-    /// Returns leaf (or last node) in heap.
+    /// Returns a reference to the root node.
+    pub fn front(&self) -> Option<&T> {
+        self.nodes.front()
+    }
+
+    /// Returns a copy of leaf (or last node) in heap.
     pub fn leaf(&self) -> Option<T> {
         self.leaf
     }
@@ -177,8 +171,8 @@ where
         self.nodes.is_empty()
     }
 
-    pub fn clone_heap_data(&self) -> Vec<T> {
-        Vec::from(self.nodes.clone())
+    pub fn take_heap_data(self) -> Vec<T> {
+        Vec::from(self.nodes)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -218,7 +212,7 @@ where
 
         if self.has_left_child(parent_index) {
             let left_child_index = (parent_index * 2) + 1;
-            if self.compare_at(parent_index, left_child_index) == ComparatorResult::Greater {
+            if self.compare_at(parent_index, left_child_index) == Ordering::Greater {
                 return false;
             }
             is_valid_left = self.is_valid_from(left_child_index);
@@ -226,7 +220,7 @@ where
 
         if self.has_right_child(parent_index) {
             let right_child_index = (parent_index * 2) + 2;
-            if self.compare_at(parent_index, right_child_index) == ComparatorResult::Greater {
+            if self.compare_at(parent_index, right_child_index) == Ordering::Greater {
                 return false;
             }
             is_valid_right = self.is_valid_from(right_child_index);
@@ -249,8 +243,8 @@ where
     /// - If no children, returns `None`.
     /// - If only one child, returns `Some(that_child_index)`.
     /// - Otherwise, calls the comparator using left child as `a` and right child as `b`..
-    ///    - If `a` is `ComparatorResult::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
-    fn select_child_index(&self, parent_index: usize) -> Option<usize> {
+    ///    - If `a` is `Ordering::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
+    fn select_child_index_of(&self, parent_index: usize) -> Option<usize> {
         let has_left_child = self.has_left_child(parent_index);
         let has_right_child = self.has_right_child(parent_index);
 
@@ -269,12 +263,12 @@ where
         }
 
         Some(match self.compare_at(left_child_index, right_child_index) {
-            ComparatorResult::Greater => right_child_index,
+            Ordering::Greater => right_child_index,
             _ => left_child_index,
         })
     }
 
-    fn pick_child_before(
+    fn select_child_index_before(
         &self,
         index: usize,
         left_child_index: usize,
@@ -283,7 +277,7 @@ where
         if right_child_index < index
             && matches!(
                 self.compare_at(right_child_index, left_child_index),
-                ComparatorResult::Less | ComparatorResult::Equal
+                Ordering::Less | Ordering::Equal
             )
         {
             right_child_index
@@ -296,7 +290,7 @@ where
         self.nodes.swap(i, j);
     }
 
-    fn compare_at(&self, parent_index: usize, child_index: usize) -> ComparatorResult {
+    fn compare_at(&self, parent_index: usize, child_index: usize) -> Ordering {
         (self.comparator)(&self.nodes[parent_index], &self.nodes[child_index])
     }
 
@@ -304,7 +298,7 @@ where
         if parent_index >= self.size() || child_index >= self.size() {
             return false;
         }
-        self.compare_at(parent_index, child_index) == ComparatorResult::Greater
+        self.compare_at(parent_index, child_index) == Ordering::Greater
     }
 
     pub(crate) fn heapify_up(&mut self, start_index: usize) {
@@ -320,7 +314,7 @@ where
 
     pub(crate) fn heapify_down(&mut self, start_index: usize) {
         let mut parent_index = start_index;
-        while let Some(child_index) = self.select_child_index(parent_index)
+        while let Some(child_index) = self.select_child_index_of(parent_index)
             && self.should_swap(parent_index, child_index)
         {
             self.swap(parent_index, child_index);
@@ -334,7 +328,8 @@ where
         let mut right_child_index = 2;
 
         while left_child_index < index {
-            let child_index = self.pick_child_before(index, left_child_index, right_child_index);
+            let child_index =
+                self.select_child_index_before(index, left_child_index, right_child_index);
             if self.should_swap(parent_index, child_index) {
                 self.swap(parent_index, child_index);
             }
@@ -356,7 +351,7 @@ where
             let value = self.nodes[i];
             if self
                 .leaf
-                .is_none_or(|leaf| (self.comparator)(&value, &leaf) == ComparatorResult::Greater)
+                .is_none_or(|leaf| (self.comparator)(&value, &leaf) == Ordering::Greater)
             {
                 self.leaf = Some(value);
             }
@@ -366,6 +361,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::cmp::Ordering;
+
     use super::*;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -381,19 +378,7 @@ mod test {
 
     #[test]
     fn test_extract_root_on_empty_heap() {
-        let mut heap = Heap::new(
-            |a: &i32, b: &i32| -> ComparatorResult {
-                let r = a - b;
-                if r == 0 {
-                    ComparatorResult::Equal
-                } else if r > 0 {
-                    ComparatorResult::Greater
-                } else {
-                    ComparatorResult::Less
-                }
-            },
-            None,
-        );
+        let mut heap = Heap::new(|a: &i32, b: &i32| -> Ordering { a.cmp(b) }, None);
         heap.clear();
         let root = heap.extract_root();
         assert_eq!(root, None);
@@ -401,19 +386,7 @@ mod test {
 
     #[test]
     fn test_min_heap() {
-        let comparator = |a: &Foo, b: &Foo| -> ComparatorResult {
-            use ComparatorResult::*;
-            let r = a.id - b.id;
-            if r == 0 {
-                Equal
-            } else if r > 0 {
-                Greater
-            } else {
-                Less
-            }
-        };
-
-        let mut heap = Heap::new(comparator, None);
+        let mut heap = Heap::<Foo, _>::new(|a, b| a.id.cmp(&b.id), None);
         let mut values = vec![50, 80, 30, 90, 60, 40, 20];
 
         // Test insert

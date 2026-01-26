@@ -1,8 +1,6 @@
-use dsa_rs::{
-    binary_tree,
-    heap::{ComparatorResult, Heap},
-    trie::Trie,
-};
+use std::cmp::Ordering;
+
+use dsa_rs::{binary_tree, heap::Heap, trie::Trie};
 
 fn main() {
     // Binary Tree
@@ -31,14 +29,14 @@ fn main() {
     println!("words that start with 'ast' = {ast_prefix:?}");
 
     // Heap
-    let comparator = |a: &i32, b: &i32| -> ComparatorResult {
+    let comparator = |a: &i32, b: &i32| -> Ordering {
         let r = a - b;
         if r == 0 {
-            ComparatorResult::Equal
+            Ordering::Equal
         } else if r > 0 {
-            ComparatorResult::Greater
+            Ordering::Greater
         } else {
-            ComparatorResult::Less
+            Ordering::Less
         }
     };
 
