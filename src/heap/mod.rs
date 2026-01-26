@@ -16,9 +16,9 @@ where
     T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> ComparatorResult + Clone,
 {
-    comparator: F,
     pub(crate) nodes: VecDeque<T>,
-    pub(crate) leaf: Option<T>,
+    comparator: F,
+    leaf: Option<T>,
 }
 
 impl<T, F> Debug for Heap<T, F>
@@ -175,6 +175,10 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
+    }
+
+    pub fn clone_heap_data(&self) -> Vec<T> {
+        Vec::from(self.nodes.clone())
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
