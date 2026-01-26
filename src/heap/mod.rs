@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{VecDeque, vec_deque},
-    fmt::{Debug, Display},
+    fmt::{self, Debug, Display},
 };
 
 #[derive(Clone)]
@@ -33,7 +33,7 @@ where
     T: Copy + PartialEq + Eq + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let nodes_len = self.nodes.len();
         write!(f, "Heap {{ nodes: [")?;
         for (i, node) in self.nodes.iter().enumerate() {

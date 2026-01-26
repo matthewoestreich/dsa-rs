@@ -3,7 +3,7 @@ use crate::heap::Heap;
 use std::{
     cmp::Ordering,
     collections::vec_deque,
-    fmt::{Debug, Display},
+    fmt::{self, Debug, Display},
 };
 
 pub struct PriorityQueue<T, F>
@@ -19,7 +19,7 @@ where
     T: Copy + PartialEq + Eq + Debug,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PriorityQueue")
             .field("heap", &self.heap)
             .finish()
@@ -31,7 +31,7 @@ where
     T: Copy + PartialEq + Eq + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "PriorityQueue {{ heap: {{ {} }} }}", self.heap)
     }
 }
