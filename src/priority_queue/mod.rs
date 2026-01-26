@@ -125,21 +125,22 @@ where
         self.dequeue()
     }
 
-    /// Retains elements for which `predicate` returns true.
-    /// Returns the elements that were removed.
+    /// Extracts, or removes, elements for which `predicate` returns true.
+    /// Retains elements for whhich `predicate` returns false.
+    /// Returns the elements that were extracted/removed.
     /// The relative order of returned elements is unspecified.
-    pub fn drain_filter<P>(&mut self, mut predicate: P) -> Vec<T>
+    pub fn extract_if<P>(&mut self, mut predicate: P) -> Vec<T>
     where
         P: FnMut(&T) -> bool,
     {
-        let mut removed = Vec::new();
+        let mut extracted = Vec::new();
         let mut retained = Vec::new();
 
         while let Some(popped) = self.pop() {
             if (predicate)(&popped) {
-                retained.push(popped);
+                extracted.push(popped);
             } else {
-                removed.push(popped);
+                retained.push(popped);
             }
         }
 
@@ -147,7 +148,7 @@ where
             self.push(t);
         }
 
-        removed
+        extracted
     }
 
     /// Shorthand for `self.iter().any(...)`
@@ -224,7 +225,7 @@ mod test {
         let does_contain = min_queue.any(|e| e.id > 50);
         assert!(does_contain);
 
-        let removed = min_queue.drain_filter(|e| e.id == 20);
+        let removed = min_queue.extract_if(|e| e.id > 20);
         assert_eq!(removed.len(), values.len() - 1);
         assert_eq!(min_queue.to_sorted_vec(), vec![Foo::new(20)]);
         assert_eq!(min_queue.size(), 1);
