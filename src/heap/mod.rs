@@ -344,6 +344,7 @@ where
         while left_child_index < index {
             let child_index =
                 self.select_child_index_before(index, left_child_index, right_child_index);
+
             if self.should_swap(parent_index, child_index) {
                 self.swap(parent_index, child_index);
             }
