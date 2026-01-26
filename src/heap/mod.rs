@@ -30,17 +30,30 @@ where
 
 impl<T, F> Display for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        let nodes_len = self.nodes.len();
+        write!(f, "Heap {{ nodes: [")?;
+        for (i, node) in self.nodes.iter().enumerate() {
+            if i < nodes_len - 1 {
+                write!(f, "{node}, ")?;
+            } else {
+                write!(f, "{node}]")?;
+            }
+        }
+        match self.leaf {
+            Some(leaf) => write!(f, ", leaf: Some({leaf})")?,
+            None => write!(f, ", leaf: None")?,
+        }
+        write!(f, " }}")
     }
 }
 
 impl<T, F> PartialEq for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -50,7 +63,7 @@ where
 
 impl<T, F> Eq for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
 }
@@ -58,7 +71,7 @@ where
 /// Immutable iteration.
 impl<'a, T, F> IntoIterator for &'a Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
@@ -72,7 +85,7 @@ where
 /// Consuming iteration.
 impl<T, F> IntoIterator for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
@@ -85,7 +98,7 @@ where
 
 impl<T, F> Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
@@ -373,6 +386,12 @@ mod test {
     impl Foo {
         fn new(id: i32) -> Self {
             Self { id }
+        }
+    }
+
+    impl Display for Foo {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Foo {{ id: {} }}", self.id)
         }
     }
 

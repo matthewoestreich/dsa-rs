@@ -28,17 +28,17 @@ where
 
 impl<T, F> Display for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "PriorityQueue {{ heap: {{ {} }} }}", self.heap)
     }
 }
 
 impl<T, F> PartialEq for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -48,7 +48,7 @@ where
 
 impl<T, F> Eq for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
 }
@@ -56,7 +56,7 @@ where
 /// Immutable iteration.
 impl<'a, T, F> IntoIterator for &'a PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
@@ -70,7 +70,7 @@ where
 /// Consuming iteration.
 impl<T, F> IntoIterator for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
@@ -83,7 +83,7 @@ where
 
 impl<T, F> PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: Copy + PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
@@ -190,6 +190,12 @@ mod test {
         }
     }
 
+    impl Display for Foo {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Foo {{ id: {} }}", self.id)
+        }
+    }
+
     #[test]
     fn test_priority_queue_with_min_logic() {
         let comparator = |a: &Foo, b: &Foo| a.id.cmp(&b.id);
@@ -200,6 +206,8 @@ mod test {
         // Test adding to queue
         values.iter().for_each(|&v| min_queue.push(Foo::new(v)));
         assert_eq!(values.len(), min_queue.size());
+
+        println!("{min_queue}");
 
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
