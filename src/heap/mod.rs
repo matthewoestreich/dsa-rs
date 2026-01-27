@@ -194,8 +194,11 @@ where
 
     /// Use in place of iter_mut.
     /// Temporarily gives mutable access to each node and automatically fixes the heap afterward.
-    pub fn for_each_mut(&mut self, f: impl FnMut(&mut T)) {
-        self.nodes.iter_mut().for_each(f);
+    pub fn for_each_mut<C>(&mut self, callback: C)
+    where
+        C: FnMut(&mut T),
+    {
+        self.nodes.iter_mut().for_each(callback);
         self.fix();
     }
 
