@@ -7,30 +7,30 @@ use std::{
 #[derive(Clone)]
 pub struct Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     nodes: VecDeque<T>,
     comparator: F,
-    leaf: Option<T>,
 }
 
 impl<T, F> Debug for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: PartialEq + Eq + Debug,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let leaf = self.leaf();
         f.debug_struct("Heap")
             .field("nodes", &self.nodes)
-            .field("leaf", &self.leaf)
+            .field("leaf", &leaf)
             .finish()
     }
 }
 
 impl<T, F> Display for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq + Display,
+    T: PartialEq + Eq + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -43,7 +43,7 @@ where
                 write!(f, "{node}]")?;
             }
         }
-        match self.leaf {
+        match self.leaf() {
             Some(leaf) => write!(f, ", leaf: Some({leaf})")?,
             None => write!(f, ", leaf: None")?,
         }
@@ -53,17 +53,17 @@ where
 
 impl<T, F> PartialEq for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.nodes == other.nodes && self.leaf == other.leaf
+        self.nodes == other.nodes && self.leaf() == other.leaf()
     }
 }
 
 impl<T, F> Eq for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
 }
@@ -71,7 +71,7 @@ where
 /// Immutable iteration.
 impl<'a, T, F> IntoIterator for &'a Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
@@ -85,7 +85,7 @@ where
 /// Consuming iteration.
 impl<T, F> IntoIterator for Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
@@ -98,14 +98,13 @@ where
 
 impl<T, F> Heap<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
             comparator,
             nodes: VecDeque::from(values.unwrap_or_default()),
-            leaf: None,
         };
         if !this.is_empty() {
             this.fix();
@@ -117,12 +116,6 @@ where
     pub fn insert(&mut self, value: T) {
         self.nodes.push_back(value);
         self.heapify_up(self.size() - 1);
-        if self
-            .leaf
-            .is_none_or(|leaf| (self.comparator)(&value, &leaf) == Ordering::Greater)
-        {
-            self.leaf = Some(value);
-        }
     }
 
     /// Alias for insert.
@@ -134,14 +127,6 @@ where
     pub fn extract_root(&mut self) -> Option<T> {
         let root_opt = self.nodes.swap_remove_back(0);
         self.heapify_down(0);
-
-        if let Some(root) = root_opt
-            && let Some(leaf) = self.leaf
-            && root == leaf
-        {
-            self.leaf = None;
-        }
-
         root_opt
     }
 
@@ -150,29 +135,31 @@ where
         self.extract_root()
     }
 
-    /// Returns a copy of the root node.
-    pub fn root(&self) -> Option<T> {
-        self.nodes.front().copied()
+    /// Returns a reference to the root node.
+    pub fn root(&self) -> Option<&T> {
+        self.nodes.front()
     }
 
     /// Alias for 'root' method.
-    pub fn top(&self) -> Option<T> {
+    pub fn top(&self) -> Option<&T> {
         self.root()
     }
 
-    /// Returns a reference to the root node.
+    /// Alias for `root` method.
     pub fn front(&self) -> Option<&T> {
         self.nodes.front()
     }
 
-    /// Returns a copy of leaf (or last node) in heap.
-    pub fn leaf(&self) -> Option<T> {
-        self.leaf
+    /// Returns reference to element with lowest priority.
+    pub fn leaf(&self) -> Option<&T> {
+        self.nodes
+            .iter()
+            .skip(self.size() / 2)
+            .max_by(|a, b| (self.comparator)(a, b))
     }
 
     pub fn clear(&mut self) {
         self.nodes = VecDeque::new();
-        self.leaf = None;
     }
 
     /// Returns number of nodes in heap.
@@ -208,12 +195,6 @@ where
             self.swap(0, i);
             self.heapify_down_until(i);
         }
-    }
-
-    /// Sorts in place as well as returns copy of sorted data.
-    pub fn to_sorted(&mut self) -> Vec<T> {
-        self.sort();
-        Vec::from(self.nodes.clone())
     }
 
     /// Checks if heap is valid.
@@ -328,7 +309,7 @@ where
         }
     }
 
-    pub(crate) fn heapify_down(&mut self, start_index: usize) {
+    fn heapify_down(&mut self, start_index: usize) {
         let mut parent_index = start_index;
 
         while let Some(child_index) = self.select_child_index_of(parent_index)
@@ -339,7 +320,7 @@ where
         }
     }
 
-    pub(crate) fn heapify_down_until(&mut self, index: usize) {
+    fn heapify_down_until(&mut self, index: usize) {
         let mut parent_index = 0;
         let mut left_child_index = 1;
         let mut right_child_index = 2;
@@ -362,17 +343,6 @@ where
         // Fix node positions.
         for i in (0..=((self.size() as f32 / 2f32) - 1f32).floor() as i32).rev() {
             self.heapify_down(i as usize);
-        }
-
-        // Fix leaf
-        for i in (self.size() as f32 / 2f32).floor() as usize..self.size() {
-            let value = self.nodes[i];
-            if self
-                .leaf
-                .is_none_or(|leaf| (self.comparator)(&value, &leaf) == Ordering::Greater)
-            {
-                self.leaf = Some(value);
-            }
         }
     }
 }
@@ -426,11 +396,13 @@ mod test {
         );
 
         // Test sort
-        let sorted = heap.to_sorted();
+        heap.sort();
+        let heap_clone_for_sort = heap.clone();
+        let heap_clone_for_sort_cloned_nodes = Vec::from(heap_clone_for_sort.nodes.clone());
+        let sorted = heap_clone_for_sort.take_heap_data();
         let sorted_vals: Vec<_> = sorted.iter().map(|foo| foo.id).collect();
         assert_eq!(
-            sorted,
-            Vec::from(heap.nodes.clone()),
+            sorted, heap_clone_for_sort_cloned_nodes,
             "sorting did not change nodes! expected={sorted:?} | got={:?}",
             heap.nodes
         );
@@ -442,27 +414,28 @@ mod test {
         );
 
         // Test fix after sort
-        assert!(!heap.is_valid());
+        assert!(!heap.is_valid(), "heap is valid when it should not be!");
         heap.fix();
         assert!(
             heap.is_valid(),
             "heap is not valid after fix! {:?}",
             heap.nodes
         );
+        let leaf = heap.leaf();
         assert_eq!(
-            heap.leaf.expect("to exist"),
-            Foo::new(90),
+            leaf.expect("to exist"),
+            &Foo::new(90),
             "expected leaf id to be 90! got {:?}",
-            heap.leaf.expect("exist")
+            leaf.expect("exist")
         );
 
         // Test root value
         let root_node = heap.root().expect("exist");
-        assert_eq!(root_node, Foo::new(20));
+        assert_eq!(root_node, &Foo::new(20));
 
         // Test leaf value
         let leaf_node = heap.leaf().expect("some");
-        assert_eq!(leaf_node, Foo::new(90));
+        assert_eq!(leaf_node, &Foo::new(90));
 
         // Test size
         assert_eq!(heap.size(), values.len());

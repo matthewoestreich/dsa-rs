@@ -8,7 +8,7 @@ use std::{
 
 pub struct PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     heap: Heap<T, F>,
@@ -16,7 +16,7 @@ where
 
 impl<T, F> Debug for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Debug,
+    T: PartialEq + Eq + Clone + Debug,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -28,7 +28,7 @@ where
 
 impl<T, F> Display for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq + Display,
+    T: PartialEq + Eq + Clone + Display,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,7 +38,7 @@ where
 
 impl<T, F> PartialEq for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -48,7 +48,7 @@ where
 
 impl<T, F> Eq for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
 }
@@ -56,7 +56,7 @@ where
 /// Immutable iteration.
 impl<'a, T, F> IntoIterator for &'a PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
@@ -70,7 +70,7 @@ where
 /// Consuming iteration.
 impl<T, F> IntoIterator for PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
@@ -83,7 +83,7 @@ where
 
 impl<T, F> PriorityQueue<T, F>
 where
-    T: Copy + PartialEq + Eq,
+    T: PartialEq + Eq + Clone,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
@@ -96,13 +96,13 @@ where
         self.heap.iter()
     }
 
-    /// Returns a copy of the element with highest priority.
-    pub fn front(&self) -> Option<T> {
+    /// Returns a reference to the element with highest priority.
+    pub fn front(&self) -> Option<&T> {
         self.heap.root()
     }
 
-    /// Returns a copy of the element with lowest priority.
-    pub fn back(&self) -> Option<T> {
+    /// Returns a reference to the element with lowest priority.
+    pub fn back(&self) -> Option<&T> {
         self.heap.leaf()
     }
 
@@ -168,7 +168,9 @@ where
     pub fn to_sorted_vec(&self) -> Vec<T> {
         let mut heap_clone = self.heap.clone();
         heap_clone.sort();
-        heap_clone.take_heap_data()
+        let mut data = heap_clone.take_heap_data();
+        data.reverse();
+        data
     }
 
     pub fn is_empty(&self) -> bool {
@@ -181,45 +183,146 @@ mod test {
     use super::*;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-    struct Foo {
+    struct FooI32 {
         id: i32,
     }
 
-    impl Foo {
+    impl FooI32 {
         fn new(id: i32) -> Self {
             Self { id }
         }
     }
 
-    impl Display for Foo {
+    impl Display for FooI32 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "Foo {{ id: {} }}", self.id)
         }
     }
 
+    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    struct FooChar {
+        char: char,
+    }
+
+    impl FooChar {
+        fn new(char: char) -> Self {
+            Self { char }
+        }
+    }
+
+    impl Display for FooChar {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Foo {{ char: {} }}", self.char)
+        }
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    struct User {
+        username: String,
+        email: String,
+        sign_in_count: u64,
+        is_active: bool,
+    }
+
+    impl User {
+        fn new(username: &str, email: &str, sign_in_count: u64, is_active: bool) -> Self {
+            Self {
+                username: username.into(),
+                email: email.into(),
+                sign_in_count,
+                is_active,
+            }
+        }
+    }
+
+    impl Display for User {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "User {{ username: {}, email: {}, sign_in_count: {}, is_active: {} }}",
+                self.username, self.email, self.sign_in_count, self.is_active
+            )
+        }
+    }
+
+    #[test]
+    fn test_with_user_struct() {
+        let comparator = |a: &User, b: &User| {
+            let sign_in_res = a.sign_in_count.cmp(&b.sign_in_count);
+            if sign_in_res == Ordering::Equal {
+                let is_active_res = b.is_active.cmp(&a.is_active);
+                if is_active_res == Ordering::Equal {
+                    return a.username.cmp(&b.username);
+                }
+                return is_active_res;
+            }
+            sign_in_res
+        };
+
+        let user_values = vec![
+            User::new("alice", "alice@example.com", 12, true),
+            User::new("bob", "bob@example.com", 3, true),
+            User::new("carol", "carol@example.com", 27, false),
+            User::new("dave", "dave@example.com", 8, true),
+            User::new("eve", "eve@example.com", 41, true),
+            User::new("frank", "frank@example.com", 30, false),
+            User::new("grace", "grace@example.com", 19, true),
+            User::new("heidi", "heidi@example.com", 5, false),
+            User::new("ivan", "ivan@example.com", 66, true),
+            User::new("judy", "judy@example.com", 2, true),
+            User::new("mallory", "mallory@example.com", 91, false),
+            User::new("nick", "nick@example.com", 14, true),
+            User::new("olivia", "olivia@example.com", 33, true),
+            User::new("peggy", "peggy@example.com", 7, false),
+            User::new("quentin", "quentin@example.com", 58, true),
+            User::new("rachel", "rachel@example.com", 21, true),
+            User::new("sybil", "sybil@example.com", 1, false),
+            User::new("sybil_2", "sybil_2@example.com", 1, false),
+            User::new("trent", "trent@example.com", 76, true),
+            User::new("ursula", "ursula@example.com", 9, false),
+            User::new("victor", "victor@example.com", 100, true),
+        ];
+
+        let user_values_clone = user_values.clone();
+
+        let min_queue = PriorityQueue::new(comparator, Some(user_values));
+
+        assert_eq!(user_values_clone.len(), min_queue.size());
+
+        assert_eq!(
+            min_queue.front().expect("some"),
+            &User::new("sybil", "sybil@example.com", 1, false)
+        );
+
+        assert_eq!(
+            min_queue.back().expect("some"),
+            &User::new("victor", "victor@example.com", 100, true)
+        );
+    }
+
     #[test]
     fn test_priority_queue_with_min_logic() {
-        let comparator = |a: &Foo, b: &Foo| a.id.cmp(&b.id);
+        let comparator = |a: &FooI32, b: &FooI32| a.id.cmp(&b.id);
         let mut min_queue = PriorityQueue::new(comparator, None);
 
         let values = vec![50, 80, 30, 90, 60, 40, 20];
 
         // Test adding to queue
-        values.iter().for_each(|&v| min_queue.push(Foo::new(v)));
+        values.iter().for_each(|&v| min_queue.push(FooI32::new(v)));
         assert_eq!(values.len(), min_queue.size());
 
         println!("{min_queue}");
 
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
+        values_clone_to_vec.sort();
         let min_queue_vals_to_vec: Vec<_> =
             min_queue.to_sorted_vec().iter().map(|t| t.id).collect();
-        values_clone_to_vec.sort_by(|a, b| b.cmp(a));
         assert_eq!(values_clone_to_vec, min_queue_vals_to_vec);
 
         // Test front
         let front = min_queue.front().expect("some");
-        assert_eq!(front, Foo::new(20));
+        assert_eq!(front, &FooI32::new(20));
 
         // Test every
         let does_contain = min_queue.any(|e| e.id > 50);
@@ -227,7 +330,41 @@ mod test {
 
         let removed = min_queue.extract_if(|e| e.id > 20);
         assert_eq!(removed.len(), values.len() - 1);
-        assert_eq!(min_queue.to_sorted_vec(), vec![Foo::new(20)]);
+        assert_eq!(min_queue.to_sorted_vec(), vec![FooI32::new(20)]);
         assert_eq!(min_queue.size(), 1);
+    }
+
+    #[test]
+    fn test_priority_queue_with_max_logic() {
+        let comparator = |a: &FooChar, b: &FooChar| b.char.cmp(&a.char);
+        let mut max_queue = PriorityQueue::new(comparator, None);
+
+        let values = vec!['m', 'x', 'f', 'b', 'z', 'k', 'c'];
+
+        // Test adding to queue
+        values.iter().for_each(|&v| max_queue.push(FooChar::new(v)));
+        assert_eq!(values.len(), max_queue.size());
+
+        println!("{max_queue}");
+
+        // Test to_vec
+        let mut values_clone_to_vec = values.clone();
+        values_clone_to_vec.sort_by(|a, b| b.cmp(a));
+        let min_queue_vals_to_vec: Vec<_> =
+            max_queue.to_sorted_vec().iter().map(|t| t.char).collect();
+        assert_eq!(values_clone_to_vec, min_queue_vals_to_vec);
+
+        // Test front
+        let front = max_queue.front().expect("some");
+        assert_eq!(front, &FooChar::new('z'));
+
+        // Test every
+        let does_contain = max_queue.any(|e| e.char > 'a');
+        assert!(does_contain);
+
+        let removed = max_queue.extract_if(|e| e.char < 'z');
+        assert_eq!(removed.len(), values.len() - 1);
+        assert_eq!(max_queue.to_sorted_vec(), vec![FooChar::new('z')]);
+        assert_eq!(max_queue.size(), 1);
     }
 }
