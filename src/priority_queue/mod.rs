@@ -3,6 +3,7 @@ use crate::heap::Heap;
 use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
+    slice, vec,
 };
 
 pub struct PriorityQueue<T, F>
@@ -59,10 +60,24 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
-    type IntoIter = std::slice::Iter<'a, T>;
+    type IntoIter = slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         (&self.heap).into_iter()
+    }
+}
+
+/// Mutable iteration.
+impl<'a, T, F> IntoIterator for &'a mut PriorityQueue<T, F>
+where
+    T: PartialEq + Eq + Clone,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    type Item = &'a mut T;
+    type IntoIter = slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&mut self.heap).into_iter()
     }
 }
 
@@ -73,7 +88,7 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
-    type IntoIter = std::vec::IntoIter<T>;
+    type IntoIter = vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.heap.into_iter()
