@@ -131,7 +131,7 @@ where
 
     /// Removes and returns the element with the highest priority.
     pub fn dequeue(&mut self) -> Option<T> {
-        self.heap.extract_root()
+        self.heap.pop()
     }
 
     /// Alias for `dequeue`.
@@ -394,8 +394,6 @@ mod test {
         values.iter().for_each(|&v| min_queue.push(FooI32::new(v)));
         assert_eq!(values.len(), min_queue.size());
 
-        println!("{min_queue}");
-
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
         values_clone_to_vec.sort();
@@ -407,7 +405,7 @@ mod test {
         let front = min_queue.front().expect("some");
         assert_eq!(front, &FooI32::new(20));
 
-        // Test every
+        // Test any
         let does_contain = min_queue.any(|e| e.id > 50);
         assert!(does_contain);
 
@@ -428,8 +426,6 @@ mod test {
         values.iter().for_each(|&v| max_queue.push(FooChar::new(v)));
         assert_eq!(values.len(), max_queue.size());
 
-        println!("{max_queue}");
-
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
         values_clone_to_vec.sort_by(|a, b| b.cmp(a));
@@ -441,7 +437,7 @@ mod test {
         let front = max_queue.front().expect("some");
         assert_eq!(front, &FooChar::new('z'));
 
-        // Test every
+        // Test any
         let does_contain = max_queue.any(|e| e.char > 'a');
         assert!(does_contain);
 

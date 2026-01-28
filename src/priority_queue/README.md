@@ -1,5 +1,9 @@
 # PriorityQueue
 
+[You can read more on priority queue here](https://en.wikipedia.org/wiki/Priority_queue).
+
+This implementation uses a binary heap for storing data.
+
 You set the priority of `T` via the `compare` function. The compare result is relative to `a`.
 
 # Examples

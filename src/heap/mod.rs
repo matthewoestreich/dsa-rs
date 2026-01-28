@@ -34,10 +34,9 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let nodes_len = self.nodes.len();
         write!(f, "Heap {{ nodes: [")?;
         for (i, node) in self.nodes.iter().enumerate() {
-            if i < nodes_len - 1 {
+            if i < self.size() - 1 {
                 write!(f, "{node}, ")?;
             } else {
                 write!(f, "{node}]")?;
@@ -121,6 +120,10 @@ where
             nodes: vec![],
         };
 
+        // We have to iterate over values and call `insert(v)`
+        // because we need to `heapify_up()` after each insert.
+        // If we were to assign `nodes: values.unwrap_or_default()`
+        // we would have an invalid heap.
         for v in values.unwrap_or_default() {
             this.insert(v);
         }
@@ -140,7 +143,7 @@ where
     }
 
     /// Removes and returns root node.
-    pub fn extract_root(&mut self) -> Option<T> {
+    pub fn pop(&mut self) -> Option<T> {
         if self.nodes.is_empty() {
             return None;
         }
@@ -155,24 +158,14 @@ where
         root
     }
 
-    /// Alias for extract_root.
-    pub fn pop(&mut self) -> Option<T> {
-        self.extract_root()
-    }
-
-    /// Returns a reference to the root node.
+    /// Returns a reference to the root node (element with highest priority).
     pub fn root(&self) -> Option<&T> {
         self.nodes.first()
     }
 
-    /// Alias for 'root' method.
-    pub fn top(&self) -> Option<&T> {
-        self.root()
-    }
-
     /// Alias for `root` method.
     pub fn front(&self) -> Option<&T> {
-        self.nodes.last()
+        self.root()
     }
 
     /// Returns reference to element with lowest priority.
@@ -197,6 +190,8 @@ where
         self.nodes.iter()
     }
 
+    /// Clones the heap, turns heap clone into sorted vec and returns it.
+    /// Does not consume `self`.
     pub fn to_sorted_vec(&self) -> Vec<T>
     where
         T: Clone,
@@ -296,8 +291,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::cmp::Ordering;
-
     use super::*;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -318,14 +311,6 @@ mod test {
     }
 
     #[test]
-    fn test_extract_root_on_empty_heap() {
-        let mut heap = Heap::new(|a: &i32, b: &i32| -> Ordering { a.cmp(b) }, None);
-        heap.clear();
-        let root = heap.extract_root();
-        assert_eq!(root, None);
-    }
-
-    #[test]
     fn test_max_heap() {
         let compare = |a: &i32, b: &i32| a.cmp(b);
         let values = vec![30, 20, 90, 50, 60, 10];
@@ -333,8 +318,10 @@ mod test {
 
         let heap_to_sorted = max_heap.to_sorted_vec();
         let expected_sort = vec![90, 60, 50, 30, 20, 10];
-        println!("max_heap_to_sorted = {heap_to_sorted:?}\nexpected_sort = {expected_sort:?}");
         assert_eq!(heap_to_sorted, expected_sort);
+
+        assert_eq!(max_heap.front().expect("some"), &90);
+        assert_eq!(max_heap.leaf().expect("some"), &10);
     }
 
     #[test]
@@ -345,8 +332,10 @@ mod test {
 
         let heap_to_sorted = min_heap.to_sorted_vec();
         let expected_sort = vec![10, 20, 30, 50, 60, 90];
-        println!("min_heap_to_sorted = {heap_to_sorted:?}\nexpected_sort = {expected_sort:?}");
         assert_eq!(heap_to_sorted, expected_sort);
+
+        assert_eq!(min_heap.front().expect("some"), &10);
+        assert_eq!(min_heap.leaf().expect("some"), &90);
     }
 
     #[test]
@@ -419,15 +408,14 @@ mod test {
         }
         assert_eq!(vals_clone, heap_clone_for_mut_iter.to_sorted_vec());
 
-        // Test extract_root
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(20));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(30));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(40));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(50));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(60));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(80));
-        assert_eq!(heap.extract_root().expect("exist"), Foo::new(90));
+        // Test pop
+        assert_eq!(heap.pop().expect("exist"), Foo::new(20));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(30));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(40));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(50));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(60));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(80));
+        assert_eq!(heap.pop().expect("exist"), Foo::new(90));
         assert!(heap.is_empty());
     }
 }
-
