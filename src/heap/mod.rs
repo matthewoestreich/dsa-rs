@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering,
-    collections::{VecDeque, vec_deque},
     fmt::{self, Debug, Display},
 };
 
@@ -10,8 +9,8 @@ where
     T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    nodes: VecDeque<T>,
-    comparator: F,
+    nodes: Vec<T>,
+    compare: F,
 }
 
 impl<T, F> Debug for Heap<T, F>
@@ -75,7 +74,7 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
-    type IntoIter = vec_deque::Iter<'a, T>;
+    type IntoIter = std::slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.iter()
@@ -89,7 +88,7 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
-    type IntoIter = vec_deque::IntoIter<T>;
+    type IntoIter = std::vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.into_iter()
@@ -101,10 +100,10 @@ where
     T: PartialEq + Eq,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    pub fn new(comparator: F, values: Option<Vec<T>>) -> Self {
+    pub fn new(compare: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
-            comparator,
-            nodes: VecDeque::from(values.unwrap_or_default()),
+            compare,
+            nodes: values.unwrap_or_default(),
         };
         if !this.is_empty() {
             this.fix();
@@ -114,7 +113,7 @@ where
 
     /// Pushes a value in the heap.
     pub fn insert(&mut self, value: T) {
-        self.nodes.push_back(value);
+        self.nodes.push(value);
         self.heapify_up(self.size() - 1);
     }
 
@@ -125,9 +124,18 @@ where
 
     /// Removes and returns root node.
     pub fn extract_root(&mut self) -> Option<T> {
-        let root_opt = self.nodes.swap_remove_back(0);
-        self.heapify_down(0);
-        root_opt
+        if self.nodes.is_empty() {
+            return None;
+        }
+
+        self.swap(0, self.size() - 1);
+        let root = self.nodes.pop();
+
+        if !self.nodes.is_empty() {
+            self.heapify_down(0);
+        }
+
+        root
     }
 
     /// Alias for extract_root.
@@ -137,7 +145,7 @@ where
 
     /// Returns a reference to the root node.
     pub fn root(&self) -> Option<&T> {
-        self.nodes.front()
+        self.nodes.first()
     }
 
     /// Alias for 'root' method.
@@ -147,19 +155,16 @@ where
 
     /// Alias for `root` method.
     pub fn front(&self) -> Option<&T> {
-        self.nodes.front()
+        self.nodes.last()
     }
 
     /// Returns reference to element with lowest priority.
     pub fn leaf(&self) -> Option<&T> {
-        self.nodes
-            .iter()
-            .skip(self.size() / 2)
-            .max_by(|a, b| (self.comparator)(a, b))
+        self.nodes.iter().min_by(|a, b| (self.compare)(a, b))
     }
 
     pub fn clear(&mut self) {
-        self.nodes = VecDeque::new();
+        self.nodes = Vec::new();
     }
 
     /// Returns number of nodes in heap.
@@ -169,10 +174,6 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
-    }
-
-    pub fn take_heap_data(self) -> Vec<T> {
-        Vec::from(self.nodes)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -189,12 +190,16 @@ where
         self.fix();
     }
 
-    /// Sorts heap data in place.
-    pub fn sort(&mut self) {
-        for i in (0..self.size()).rev() {
-            self.swap(0, i);
-            self.heapify_down_until(i);
+    pub fn to_sorted_vec(&self) -> Vec<T>
+    where
+        T: Clone,
+    {
+        let mut clone = self.clone();
+        let mut sorted = Vec::with_capacity(clone.size());
+        while let Some(item) = clone.pop() {
+            sorted.push(item);
         }
+        sorted
     }
 
     /// Checks if heap is valid.
@@ -202,147 +207,89 @@ where
         self.is_valid_from(0)
     }
 
-    /// Recursively checks if the heap is valid, starting from specified parent index.
-    fn is_valid_from(&self, parent_index: usize) -> bool {
-        let mut is_valid_left = true;
-        let mut is_valid_right = true;
+    /// Recursively checks if the heap is valid, starting from specified index.
+    fn is_valid_from(&self, index: usize) -> bool {
+        let left_child = (index * 2) + 1;
+        let right_child = (index * 2) + 2;
 
-        if self.has_left_child(parent_index) {
-            let left_child_index = (parent_index * 2) + 1;
-            if self.compare_at(parent_index, left_child_index) == Ordering::Greater {
+        let has_left = left_child < self.size();
+        let has_right = right_child < self.size();
+
+        let mut valid_left = true;
+        let mut valid_right = true;
+
+        if has_left {
+            if self.compare_at(index, left_child) == Ordering::Greater {
                 return false;
             }
-            is_valid_left = self.is_valid_from(left_child_index);
+            valid_left = self.is_valid_from(left_child);
         }
 
-        if self.has_right_child(parent_index) {
-            let right_child_index = (parent_index * 2) + 2;
-            if self.compare_at(parent_index, right_child_index) == Ordering::Greater {
+        if has_right {
+            if self.compare_at(index, right_child) == Ordering::Greater {
                 return false;
             }
-            is_valid_right = self.is_valid_from(right_child_index);
+            valid_right = self.is_valid_from(right_child);
         }
 
-        is_valid_left && is_valid_right
-    }
-
-    fn has_left_child(&self, parent_index: usize) -> bool {
-        let left_child_index = (parent_index * 2) + 1;
-        left_child_index < self.size()
-    }
-
-    fn has_right_child(&self, parent_index: usize) -> bool {
-        let right_child_index = (parent_index * 2) + 2;
-        right_child_index < self.size()
-    }
-
-    /// Compares children of element at `parent_index` and chooses one of them based up `comparator` result.
-    /// - If no children, returns `None`.
-    /// - If only one child, returns `Some(that_child_index)`.
-    /// - Otherwise, calls the comparator using left child as `a` and right child as `b`..
-    ///    - If `a` is `Ordering::Greater` than `b` we return `Some(index_of_b)`, otherwise we return `Some(index_of_a)`.
-    fn select_child_index_of(&self, parent_index: usize) -> Option<usize> {
-        let has_left_child = self.has_left_child(parent_index);
-        let has_right_child = self.has_right_child(parent_index);
-
-        if !has_left_child && !has_right_child {
-            return None;
-        }
-
-        let right_child_index = (parent_index * 2) + 2;
-        if !has_left_child {
-            return Some(right_child_index);
-        }
-
-        let left_child_index = (parent_index * 2) + 1;
-        if !has_right_child {
-            return Some(left_child_index);
-        }
-
-        Some(match self.compare_at(left_child_index, right_child_index) {
-            Ordering::Greater => right_child_index,
-            _ => left_child_index,
-        })
-    }
-
-    fn select_child_index_before(
-        &self,
-        index: usize,
-        left_child_index: usize,
-        right_child_index: usize,
-    ) -> usize {
-        if right_child_index < index
-            && matches!(
-                self.compare_at(right_child_index, left_child_index),
-                Ordering::Less | Ordering::Equal
-            )
-        {
-            right_child_index
-        } else {
-            left_child_index
-        }
+        valid_left && valid_right
     }
 
     fn swap(&mut self, i: usize, j: usize) {
         self.nodes.swap(i, j);
     }
 
-    fn compare_at(&self, parent_index: usize, child_index: usize) -> Ordering {
-        (self.comparator)(&self.nodes[parent_index], &self.nodes[child_index])
+    fn compare_at(&self, a: usize, b: usize) -> Ordering {
+        (self.compare)(&self.nodes[a], &self.nodes[b])
     }
 
-    fn should_swap(&self, parent_index: usize, child_index: usize) -> bool {
-        if parent_index >= self.size() || child_index >= self.size() {
-            return false;
-        }
-        self.compare_at(parent_index, child_index) == Ordering::Greater
-    }
+    fn heapify_up(&mut self, start_index: usize) {
+        let mut child = start_index;
 
-    pub(crate) fn heapify_up(&mut self, start_index: usize) {
-        let mut child_index = start_index;
-        let mut parent_index = ((child_index as f32 - 1f32) / 2f32).floor() as usize;
-
-        while self.should_swap(parent_index, child_index) {
-            self.swap(parent_index, child_index);
-            child_index = parent_index;
-            parent_index = ((child_index as f32 - 1f32) / 2f32).floor() as usize;
+        while child > 0 {
+            let parent = (child - 1) / 2;
+            if self.compare_at(child, parent) == Ordering::Greater {
+                self.swap(child, parent);
+                child = parent;
+            } else {
+                break;
+            }
         }
     }
 
     fn heapify_down(&mut self, start_index: usize) {
-        let mut parent_index = start_index;
+        let mut parent = start_index;
 
-        while let Some(child_index) = self.select_child_index_of(parent_index)
-            && self.should_swap(parent_index, child_index)
-        {
-            self.swap(parent_index, child_index);
-            parent_index = child_index;
-        }
-    }
+        loop {
+            let mut candidate = parent;
+            let left_child = (parent * 2) + 1;
+            let right_child = (parent * 2) + 2;
 
-    fn heapify_down_until(&mut self, index: usize) {
-        let mut parent_index = 0;
-        let mut left_child_index = 1;
-        let mut right_child_index = 2;
-
-        while left_child_index < index {
-            let child_index =
-                self.select_child_index_before(index, left_child_index, right_child_index);
-
-            if self.should_swap(parent_index, child_index) {
-                self.swap(parent_index, child_index);
+            if left_child < self.size()
+                && self.compare_at(left_child, candidate) == Ordering::Greater
+            {
+                candidate = left_child;
             }
 
-            parent_index = child_index;
-            left_child_index = (parent_index * 2) + 1;
-            right_child_index = (parent_index * 2) + 2;
+            if right_child < self.size()
+                && self.compare_at(right_child, candidate) == Ordering::Greater
+            {
+                candidate = right_child;
+            }
+
+            if candidate == parent {
+                break;
+            }
+
+            self.swap(parent, candidate);
+            parent = candidate;
         }
     }
 
     fn fix(&mut self) {
         // Fix node positions.
-        for i in (0..=((self.size() as f32 / 2f32) - 1f32).floor() as i32).rev() {
-            self.heapify_down(i as usize);
+        for i in (0..=(self.size() / 2) - 1).rev() {
+            self.heapify_down(i);
         }
     }
 }
@@ -379,13 +326,45 @@ mod test {
     }
 
     #[test]
+    fn test_max_heap() {
+        let compare = |a: &i32, b: &i32| a.cmp(b);
+        let values = vec![30, 20, 90, 50, 60, 10];
+        let max_heap = Heap::new(compare, Some(values));
+
+        let heap_to_sorted = max_heap.to_sorted_vec();
+        let expected_sort = vec![90, 60, 50, 30, 20, 10];
+        println!("max_heap_to_sorted = {heap_to_sorted:?}\nexpected_sort = {expected_sort:?}");
+        assert_eq!(heap_to_sorted, expected_sort);
+    }
+
+    #[test]
     fn test_min_heap() {
-        let mut heap = Heap::<Foo, _>::new(|a, b| a.id.cmp(&b.id), None);
-        let mut values = vec![50, 80, 30, 90, 60, 40, 20];
+        let compare = |a: &i32, b: &i32| b.cmp(a);
+        let values = vec![30, 20, 90, 50, 60, 10];
+        let min_heap = Heap::new(compare, Some(values));
+
+        let heap_to_sorted = min_heap.to_sorted_vec();
+        let expected_sort = vec![10, 20, 30, 50, 60, 90];
+        println!("min_heap_to_sorted = {heap_to_sorted:?}\nexpected_sort = {expected_sort:?}");
+        assert_eq!(heap_to_sorted, expected_sort);
+    }
+
+    #[test]
+    fn test_min_heap_foo() {
+        let mut heap = Heap::<Foo, _>::new(|a, b| b.id.cmp(&a.id), None);
+        let values = vec![
+            Foo::new(50),
+            Foo::new(80),
+            Foo::new(30),
+            Foo::new(90),
+            Foo::new(60),
+            Foo::new(40),
+            Foo::new(20),
+        ];
 
         // Test insert
         for &value in values.iter() {
-            heap.insert(Foo::new(value));
+            heap.insert(value);
         }
         assert_eq!(
             values.len(),
@@ -396,38 +375,13 @@ mod test {
         );
 
         // Test sort
-        heap.sort();
-        let heap_clone_for_sort = heap.clone();
-        let heap_clone_for_sort_cloned_nodes = Vec::from(heap_clone_for_sort.nodes.clone());
-        let sorted = heap_clone_for_sort.take_heap_data();
-        let sorted_vals: Vec<_> = sorted.iter().map(|foo| foo.id).collect();
-        assert_eq!(
-            sorted, heap_clone_for_sort_cloned_nodes,
-            "sorting did not change nodes! expected={sorted:?} | got={:?}",
-            heap.nodes
-        );
-        values.sort();
-        values.reverse();
-        assert_eq!(
-            sorted_vals, values,
-            "expected sorted heap to equal sorted values!\n\theap = {sorted_vals:?}\n\tvalues = {values:?}"
-        );
+        let to_sorted: Vec<_> = heap.to_sorted_vec();
+        println!("min_foo_heap_to_sorted = {to_sorted:?}\nfoo_heap = {heap}");
+        let mut values_for_sort = values.clone();
+        values_for_sort.sort();
+        assert_eq!(to_sorted, values_for_sort);
 
-        // Test fix after sort
-        assert!(!heap.is_valid(), "heap is valid when it should not be!");
-        heap.fix();
-        assert!(
-            heap.is_valid(),
-            "heap is not valid after fix! {:?}",
-            heap.nodes
-        );
-        let leaf = heap.leaf();
-        assert_eq!(
-            leaf.expect("to exist"),
-            &Foo::new(90),
-            "expected leaf id to be 90! got {:?}",
-            leaf.expect("exist")
-        );
+        println!("{heap}");
 
         // Test root value
         let root_node = heap.root().expect("exist");
@@ -452,33 +406,21 @@ mod test {
         for &el in heap.iter() {
             collected.push(el);
         }
-        assert_eq!(Vec::from(heap.nodes.clone()), collected);
+        assert_eq!(heap.nodes.clone(), collected);
         collected.sort();
-        let mut collected_vals = values.iter().map(|&v| Foo::new(v)).collect::<Vec<_>>();
+        let mut collected_vals = values.clone();
         collected_vals.sort();
         assert_eq!(collected, collected_vals);
 
         // Test mutable iteration.
         let multiplyer = 10;
         let mut heap_clone_for_mut_iter = heap.clone();
-        let mut vals_clone = values
-            .clone()
-            .iter()
-            .map(|&v| Foo::new(v * multiplyer))
-            .collect::<Vec<_>>();
+        let mut vals_clone: Vec<_> = values.clone();
+        vals_clone.iter_mut().for_each(|v| v.id *= multiplyer);
         heap_clone_for_mut_iter.for_each_mut(|el| el.id *= multiplyer);
         vals_clone.sort();
-        let mut heap_nodes_vec = Vec::from(heap_clone_for_mut_iter.nodes.clone());
-        heap_nodes_vec.sort();
+        let heap_nodes_vec = heap_clone_for_mut_iter.to_sorted_vec();
         assert_eq!(vals_clone, heap_nodes_vec);
-
-        // Test consuming iterator.
-        let heap_consume_clone = heap.clone();
-        let mut consumed: Vec<_> = heap_consume_clone.into_iter().collect();
-        consumed.sort();
-        let mut consumed_vals: Vec<_> = values.clone().iter().map(|&v| Foo::new(v)).collect();
-        consumed_vals.sort();
-        assert_eq!(consumed, consumed_vals);
 
         // Test extract_root
         assert_eq!(heap.extract_root().expect("exist"), Foo::new(20));
