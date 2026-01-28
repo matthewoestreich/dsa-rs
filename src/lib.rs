@@ -1,5 +1,11 @@
+mod heap;
+mod linked_list;
+mod priority_queue;
+mod trie;
+
 pub mod binary_tree;
-pub mod heap;
-pub mod linked_list;
-pub mod priority_queue;
-pub mod trie;
+
+pub use heap::*;
+pub use linked_list::*;
+pub use priority_queue::*;
+pub use trie::*;

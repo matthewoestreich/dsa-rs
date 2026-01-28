@@ -1,1 +1,3 @@
-pub mod singly;
+mod singly;
+
+pub use singly::*;

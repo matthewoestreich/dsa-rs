@@ -3,12 +3,12 @@ use std::{
     fmt::{Debug, Display},
 };
 
-pub struct LinkedList<T> {
+pub struct SinglyLinkedList<T> {
     head: Option<Box<Node<T>>>,
     size: usize,
 }
 
-impl<T> LinkedList<T> {
+impl<T> SinglyLinkedList<T> {
     pub fn new(head: T) -> Self {
         Self {
             head: Some(Node::new(head)),
@@ -96,7 +96,7 @@ impl<T> LinkedList<T> {
     }
 }
 
-impl<T> Debug for LinkedList<T>
+impl<T> Debug for SinglyLinkedList<T>
 where
     T: Debug,
 {
@@ -108,7 +108,7 @@ where
     }
 }
 
-impl<T> Display for LinkedList<T>
+impl<T> Display for SinglyLinkedList<T>
 where
     T: Display,
 {
@@ -128,7 +128,7 @@ where
     }
 }
 
-impl<T> PartialEq for LinkedList<T>
+impl<T> PartialEq for SinglyLinkedList<T>
 where
     T: PartialEq,
 {
@@ -158,9 +158,9 @@ where
     }
 }
 
-impl<T> Eq for LinkedList<T> where T: Eq {}
+impl<T> Eq for SinglyLinkedList<T> where T: Eq {}
 
-impl<T> TryFrom<&[T]> for LinkedList<T>
+impl<T> TryFrom<&[T]> for SinglyLinkedList<T>
 where
     T: Clone,
 {
@@ -170,7 +170,7 @@ where
         if slice.is_empty() {
             return Err(SinglyLinkedListError::EmptySource);
         }
-        let mut list = LinkedList::new(slice[0].clone());
+        let mut list = SinglyLinkedList::new(slice[0].clone());
         for v in &slice[1..] {
             list.insert_last(v.clone());
         }
@@ -179,7 +179,7 @@ where
 }
 
 /// Consumes the slice!
-impl<T, const N: usize> TryFrom<[T; N]> for LinkedList<T> {
+impl<T, const N: usize> TryFrom<[T; N]> for SinglyLinkedList<T> {
     type Error = SinglyLinkedListError;
 
     fn try_from(slice: [T; N]) -> Result<Self, Self::Error> {
@@ -199,7 +199,7 @@ impl<T, const N: usize> TryFrom<[T; N]> for LinkedList<T> {
     }
 }
 
-impl<T, const N: usize> TryFrom<&[T; N]> for LinkedList<T>
+impl<T, const N: usize> TryFrom<&[T; N]> for SinglyLinkedList<T>
 where
     T: Clone,
 {
@@ -210,7 +210,7 @@ where
             return Err(SinglyLinkedListError::EmptySource);
         }
 
-        let mut this = LinkedList::new(slice[0].clone());
+        let mut this = SinglyLinkedList::new(slice[0].clone());
         for v in &slice[1..] {
             this.insert_last(v.clone());
         }
@@ -219,14 +219,14 @@ where
     }
 }
 
-impl<T> TryFrom<Vec<T>> for LinkedList<T>
+impl<T> TryFrom<Vec<T>> for SinglyLinkedList<T>
 where
     T: Clone,
 {
     type Error = SinglyLinkedListError;
 
     fn try_from(vec: Vec<T>) -> Result<Self, Self::Error> {
-        LinkedList::try_from(vec.as_slice())
+        SinglyLinkedList::try_from(vec.as_slice())
     }
 }
 
@@ -309,7 +309,7 @@ mod test {
     #[test]
     fn test_insert_first() {
         let head = 0;
-        let mut list = LinkedList::new(head);
+        let mut list = SinglyLinkedList::new(head);
         let new_head = 1;
         list.insert_first(new_head);
         list.insert_first(2);
@@ -319,7 +319,7 @@ mod test {
 
     #[test]
     fn test_insert_last() {
-        let mut list = LinkedList::new(0);
+        let mut list = SinglyLinkedList::new(0);
         list.insert_first(1);
         list.insert_first(2);
         list.insert_last(99);
@@ -329,12 +329,12 @@ mod test {
 
     #[test]
     fn test_remove_at() {
-        let mut expected_list = LinkedList::new("a");
+        let mut expected_list = SinglyLinkedList::new("a");
         for v in ["b", "c"] {
             expected_list.insert_last(v);
         }
 
-        let mut list = LinkedList::new("a");
+        let mut list = SinglyLinkedList::new("a");
         for v in ["b", "c", "d"] {
             list.insert_last(v);
         }
@@ -353,7 +353,7 @@ mod test {
 
     #[test]
     fn test_pop_head() {
-        let mut list = LinkedList::new(33);
+        let mut list = SinglyLinkedList::new(33);
         for v in [34, 67, 22, 90, 81] {
             list.insert_last(v);
         }
@@ -366,7 +366,7 @@ mod test {
 
     #[test]
     fn test_pop_tail() {
-        let mut list = LinkedList::new(33);
+        let mut list = SinglyLinkedList::new(33);
         for v in [34, 67, 22, 90, 81] {
             list.insert_last(v);
         }
@@ -379,14 +379,14 @@ mod test {
 
     #[test]
     fn test_equality() {
-        let mut list_a = LinkedList::new("a");
+        let mut list_a = SinglyLinkedList::new("a");
         list_a.insert_last("b");
-        let list_b = LinkedList::new("a");
+        let list_b = SinglyLinkedList::new("a");
         assert_ne!(list_a, list_b);
 
         let data = ["z", "x", "q", "w"];
-        let mut list_c = LinkedList::new(data[0]);
-        let mut list_d = LinkedList::new(data[0]);
+        let mut list_c = SinglyLinkedList::new(data[0]);
+        let mut list_d = SinglyLinkedList::new(data[0]);
         for v in &data[1..] {
             list_c.insert_last(v);
             list_d.insert_last(v);
@@ -397,22 +397,22 @@ mod test {
     #[test]
     fn test_try_from() {
         let vec_data = Vec::from(["a", "b", "c", "d", "e", "f"]);
-        let vec_list = LinkedList::try_from(vec_data).expect("no errors");
+        let vec_list = SinglyLinkedList::try_from(vec_data).expect("no errors");
         assert_eq!(Some(&"a"), vec_list.head());
         assert_eq!(Some(&"f"), vec_list.tail());
 
         let arr_data = ["a", "b", "c", "d", "e", "f"];
-        let arr_list = LinkedList::try_from(arr_data).expect("no errors");
+        let arr_list = SinglyLinkedList::try_from(arr_data).expect("no errors");
         assert_eq!(Some(&"a"), arr_list.head());
         assert_eq!(Some(&"f"), arr_list.tail());
 
         let arr_ref_data = ["a", "b", "c", "d", "e", "f"];
-        let arr_ref_list = LinkedList::try_from(&arr_ref_data).expect("no errors");
+        let arr_ref_list = SinglyLinkedList::try_from(&arr_ref_data).expect("no errors");
         assert_eq!(Some(&"a"), arr_ref_list.head());
         assert_eq!(Some(&"f"), arr_ref_list.tail());
 
         let slice_data = ["a", "b", "c", "d", "e", "f"];
-        let slice_list = LinkedList::try_from(&slice_data[..]).expect("no errors");
+        let slice_list = SinglyLinkedList::try_from(&slice_data[..]).expect("no errors");
         assert_eq!(Some(&"a"), slice_list.head());
         assert_eq!(Some(&"f"), slice_list.tail());
     }

@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 
-use dsa_rs::{
-    binary_tree, heap::Heap, linked_list::singly, priority_queue::PriorityQueue, trie::Trie,
-};
+use dsa_rs::{Heap, PriorityQueue, SinglyLinkedList, Trie, binary_tree};
 
 fn main() {
     /* Binary Tree */
@@ -66,7 +64,7 @@ fn main() {
     );
 
     /* Singly linked list */
-    let mut singly_linked_list = singly::LinkedList::new(0);
+    let mut singly_linked_list = SinglyLinkedList::new(0);
     singly_linked_list.insert_last(1);
     singly_linked_list.insert_last(2);
     // Returns reference
