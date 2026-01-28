@@ -82,6 +82,20 @@ where
     }
 }
 
+/// Mutable iteration.
+impl<'a, T, F> IntoIterator for &'a mut Heap<T, F>
+where
+    T: PartialEq + Eq,
+    F: Fn(&T, &T) -> Ordering + Copy,
+{
+    type Item = &'a mut T;
+    type IntoIter = slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.iter_mut()
+    }
+}
+
 /// Consuming iteration.
 impl<T, F> IntoIterator for Heap<T, F>
 where
@@ -104,11 +118,13 @@ where
     pub fn new(compare: F, values: Option<Vec<T>>) -> Self {
         let mut this = Self {
             compare,
-            nodes: values.unwrap_or_default(),
+            nodes: vec![],
         };
-        if !this.is_empty() {
-            this.fix();
+
+        for v in values.unwrap_or_default() {
+            this.insert(v);
         }
+
         this
     }
 
@@ -179,16 +195,6 @@ where
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.nodes.iter()
-    }
-
-    /// Use in place of iter_mut.
-    /// Temporarily gives mutable access to each node and automatically fixes the heap afterward.
-    pub fn for_each_mut<C>(&mut self, callback: C)
-    where
-        C: FnMut(&mut T),
-    {
-        self.nodes.iter_mut().for_each(callback);
-        self.fix();
     }
 
     pub fn to_sorted_vec(&self) -> Vec<T>
@@ -284,13 +290,6 @@ where
 
             self.swap(parent, candidate);
             parent = candidate;
-        }
-    }
-
-    fn fix(&mut self) {
-        // Fix node positions.
-        for i in (0..=(self.size() / 2) - 1).rev() {
-            self.heapify_down(i);
         }
     }
 }
@@ -404,24 +403,21 @@ mod test {
 
         // Test immutable iteration
         let mut collected: Vec<_> = vec![]; // OR : (&heap).into_iter().copied().collect();
-        for &el in heap.iter() {
+        for &el in &heap {
             collected.push(el);
         }
         assert_eq!(heap.nodes.clone(), collected);
-        collected.sort();
-        let mut collected_vals = values.clone();
-        collected_vals.sort();
-        assert_eq!(collected, collected_vals);
 
         // Test mutable iteration.
         let multiplyer = 10;
         let mut heap_clone_for_mut_iter = heap.clone();
         let mut vals_clone: Vec<_> = values.clone();
         vals_clone.iter_mut().for_each(|v| v.id *= multiplyer);
-        heap_clone_for_mut_iter.for_each_mut(|el| el.id *= multiplyer);
         vals_clone.sort();
-        let heap_nodes_vec = heap_clone_for_mut_iter.to_sorted_vec();
-        assert_eq!(vals_clone, heap_nodes_vec);
+        for el in &mut heap_clone_for_mut_iter {
+            el.id *= multiplyer;
+        }
+        assert_eq!(vals_clone, heap_clone_for_mut_iter.to_sorted_vec());
 
         // Test extract_root
         assert_eq!(heap.extract_root().expect("exist"), Foo::new(20));
@@ -434,3 +430,4 @@ mod test {
         assert!(heap.is_empty());
     }
 }
+
