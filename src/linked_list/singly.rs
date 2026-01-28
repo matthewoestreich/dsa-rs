@@ -170,11 +170,11 @@ where
         if slice.is_empty() {
             return Err(SinglyLinkedListError::EmptySource);
         }
-        let mut list = Self::new(slice[0].clone());
+        let mut this = Self::new(slice[0].clone());
         for v in &slice[1..] {
-            list.insert_last(v.clone());
+            this.insert_last(v.clone());
         }
-        Ok(list)
+        Ok(this)
     }
 }
 
