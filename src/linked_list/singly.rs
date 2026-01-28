@@ -140,21 +140,14 @@ where
         let mut a = &self.head;
         let mut b = &other.head;
 
-        while let Some(a_node) = a {
-            if b.is_none() {
-                return false;
-            }
-
-            let b_node = b.as_ref().expect("some");
-            if a_node.value != b_node.value {
-                return false;
-            }
-
-            a = &a_node.next;
-            b = &b_node.next;
+        while let (Some(node_a), Some(node_b)) = (a.as_ref(), b.as_ref())
+            && node_a.value == node_b.value
+        {
+            a = &node_a.next;
+            b = &node_b.next;
         }
 
-        b.is_none()
+        b.is_none() && a.is_none()
     }
 }
 
@@ -406,6 +399,16 @@ mod test {
         list_f.insert_last(2);
         list_f.insert_last(3);
         assert_ne!(list_e, list_f);
+
+        let mut list_g = SinglyLinkedList::new(0);
+        list_g.insert_last(1);
+        list_g.insert_last(2);
+        list_g.insert_last(3);
+        let mut list_h = SinglyLinkedList::new(0);
+        list_h.insert_last(1);
+        list_h.insert_last(2);
+        list_h.insert_last(99);
+        assert_ne!(list_g, list_h);
     }
 
     #[test]
