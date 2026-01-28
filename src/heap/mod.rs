@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
+    slice, vec,
 };
 
 #[derive(Clone)]
@@ -18,7 +19,7 @@ where
     T: PartialEq + Eq + Debug,
     F: Fn(&T, &T) -> Ordering + Copy,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let leaf = self.leaf();
         f.debug_struct("Heap")
             .field("nodes", &self.nodes)
@@ -74,7 +75,7 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = &'a T;
-    type IntoIter = std::slice::Iter<'a, T>;
+    type IntoIter = slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.iter()
@@ -88,7 +89,7 @@ where
     F: Fn(&T, &T) -> Ordering + Copy,
 {
     type Item = T;
-    type IntoIter = std::vec::IntoIter<T>;
+    type IntoIter = vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.into_iter()
