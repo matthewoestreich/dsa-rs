@@ -392,6 +392,18 @@ mod test {
             list_d.insert_last(v);
         }
         assert_eq!(list_c, list_d);
+
+        // Due to how our equality check is written, we
+        // should test for the case where the "left hand side" (a)
+        // has no elements left but the "right hand side" (b) does.
+        let mut list_e = SinglyLinkedList::new(0);
+        list_e.insert_last(1);
+        list_e.insert_last(2);
+        let mut list_f = SinglyLinkedList::new(0);
+        list_f.insert_last(1);
+        list_f.insert_last(2);
+        list_f.insert_last(3);
+        assert_ne!(list_e, list_f);
     }
 
     #[test]
