@@ -170,7 +170,7 @@ where
         if slice.is_empty() {
             return Err(SinglyLinkedListError::EmptySource);
         }
-        let mut list = SinglyLinkedList::new(slice[0].clone());
+        let mut list = Self::new(slice[0].clone());
         for v in &slice[1..] {
             list.insert_last(v.clone());
         }
@@ -210,7 +210,7 @@ where
             return Err(SinglyLinkedListError::EmptySource);
         }
 
-        let mut this = SinglyLinkedList::new(slice[0].clone());
+        let mut this = Self::new(slice[0].clone());
         for v in &slice[1..] {
             this.insert_last(v.clone());
         }
@@ -226,7 +226,7 @@ where
     type Error = SinglyLinkedListError;
 
     fn try_from(vec: Vec<T>) -> Result<Self, Self::Error> {
-        SinglyLinkedList::try_from(vec.as_slice())
+        Self::try_from(vec.as_slice())
     }
 }
 
