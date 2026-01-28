@@ -140,7 +140,8 @@ where
         let mut a = &self.head;
         let mut b = &other.head;
 
-        while let (Some(node_a), Some(node_b)) = (a.as_ref(), b.as_ref())
+        while let Some(node_a) = a.as_ref()
+            && let Some(node_b) = b.as_ref()
             && node_a.value == node_b.value
         {
             a = &node_a.next;
