@@ -372,8 +372,7 @@ mod test {
         for v in [34, 67, 22, 90, 81] {
             list.insert_back(v);
         }
-        let head = list.pop_head();
-        assert_eq!(head, Some(33));
+        assert_eq!(list.pop_head(), Some(33));
         // Test if head was updated.
         assert_eq!(list.head(), Some(&34));
         assert_eq!(list.tail(), Some(&81));
