@@ -208,7 +208,7 @@ where
     }
 }
 
-/// Consumes the slice!
+/// Consumes the array!
 impl<T, const N: usize> TryFrom<[T; N]> for SinglyLinkedList<T> {
     type Error = SinglyLinkedListError;
 
