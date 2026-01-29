@@ -57,34 +57,34 @@ mod test {
 
     #[test]
     fn test_peek() {
-        let mut queue_a = Queue::new();
+        let mut queue = Queue::new();
         for v in [10, 20, 30, 40, 50] {
-            queue_a.enqueue(v);
+            queue.enqueue(v);
         }
 
-        assert_eq!(queue_a.peek(), Some(&10));
-        assert_eq!(queue_a.len(), 5);
+        assert_eq!(queue.peek(), Some(&10));
+        assert_eq!(queue.len(), 5);
 
-        _ = queue_a.dequeue();
-        assert_eq!(queue_a.peek(), Some(&20));
-        assert_eq!(queue_a.len(), 4);
+        _ = queue.dequeue();
+        assert_eq!(queue.peek(), Some(&20));
+        assert_eq!(queue.len(), 4);
 
-        _ = queue_a.dequeue();
-        assert_eq!(queue_a.peek(), Some(&30));
-        assert_eq!(queue_a.len(), 3);
+        _ = queue.dequeue();
+        assert_eq!(queue.peek(), Some(&30));
+        assert_eq!(queue.len(), 3);
 
-        _ = queue_a.dequeue();
-        assert_eq!(queue_a.peek(), Some(&40));
-        assert_eq!(queue_a.len(), 2);
+        _ = queue.dequeue();
+        assert_eq!(queue.peek(), Some(&40));
+        assert_eq!(queue.len(), 2);
 
-        _ = queue_a.dequeue();
-        assert_eq!(queue_a.peek(), Some(&50));
-        assert_eq!(queue_a.len(), 1);
+        _ = queue.dequeue();
+        assert_eq!(queue.peek(), Some(&50));
+        assert_eq!(queue.len(), 1);
 
-        _ = queue_a.dequeue();
-        assert!(queue_a.is_empty());
+        _ = queue.dequeue();
+        assert!(queue.is_empty());
 
-        let dequeue_from_empty = queue_a.dequeue();
+        let dequeue_from_empty = queue.dequeue();
         assert_eq!(dequeue_from_empty, None);
     }
 
