@@ -18,10 +18,12 @@ impl<T> SinglyLinkedList<T> {
 
     /// Returns reference to head.
     pub fn head(&self) -> Option<&T> {
-        match self.head.as_ref() {
-            Some(h) => Some(&h.value),
-            None => None,
-        }
+        self.head.as_deref().map(|h| &h.value)
+    }
+
+    /// Returns mutable reference to head.
+    pub fn head_mut(&mut self) -> Option<&mut T> {
+        self.head.as_deref_mut().map(|h| &mut h.value)
     }
 
     /// Returns reference to tail.
@@ -33,6 +35,20 @@ impl<T> SinglyLinkedList<T> {
                 return Some(&curr_node.value);
             }
             curr = &curr_node.next;
+        }
+
+        None
+    }
+
+    /// Returns mutable reference to tail.
+    pub fn tail_mut(&mut self) -> Option<&mut T> {
+        let mut curr = &mut self.head;
+
+        while let Some(curr_node) = curr {
+            if curr_node.next.is_none() {
+                return Some(&mut curr_node.value);
+            }
+            curr = &mut curr_node.next;
         }
 
         None
@@ -66,6 +82,18 @@ impl<T> SinglyLinkedList<T> {
                 return;
             }
             curr = &mut curr_node.next;
+        }
+    }
+
+    pub fn iter(&self) -> SinglyLinkedListIter<'_, T> {
+        SinglyLinkedListIter {
+            next: self.head.as_deref(),
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> SinglyLinkedListIterMut<'_, T> {
+        SinglyLinkedListIterMut {
+            next: self.head.as_deref_mut(),
         }
     }
 
@@ -232,6 +260,84 @@ where
     }
 }
 
+/// Consuming iteration.
+impl<T> IntoIterator for SinglyLinkedList<T> {
+    type Item = T;
+    type IntoIter = SinglyLinkedListIntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SinglyLinkedListIntoIter { list: self }
+    }
+}
+
+/// Immutable borrowing iteration.
+impl<'a, T> IntoIterator for &'a SinglyLinkedList<T> {
+    type Item = &'a T;
+    type IntoIter = SinglyLinkedListIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Mutable borrowing iteration.
+impl<'a, T> IntoIterator for &'a mut SinglyLinkedList<T> {
+    type Item = &'a mut T;
+    type IntoIter = SinglyLinkedListIterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+/* ============================================================================================ */
+/* ==================================== Iterators ============================================= */
+/* ============================================================================================ */
+
+pub struct SinglyLinkedListIter<'a, T> {
+    next: Option<&'a Node<T>>,
+}
+
+/// Iterator
+impl<'a, T> Iterator for SinglyLinkedListIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.map(|node| {
+            self.next = node.next.as_deref();
+            &node.value
+        })
+    }
+}
+
+pub struct SinglyLinkedListIterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<'a, T> Iterator for SinglyLinkedListIterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_deref_mut();
+            &mut node.value
+        })
+    }
+}
+
+pub struct SinglyLinkedListIntoIter<T> {
+    list: SinglyLinkedList<T>,
+}
+
+/// Consuming iterator
+impl<T> Iterator for SinglyLinkedListIntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.list.pop_head()
+    }
+}
+
 /* ============================================================================================ */
 /* ==================================== Node ================================================== */
 /* ============================================================================================ */
@@ -292,7 +398,7 @@ impl Display for SinglyLinkedListError {
         match self {
             SinglyLinkedListError::EmptySource => write!(
                 f,
-                "SinglyLinkedListError::EmptySource -> Cannot convert empty slice into LinkedList"
+                "SinglyLinkedListError::EmptySource(source must contain at least one element)"
             ),
         }
     }
@@ -340,6 +446,69 @@ mod test {
         _ = list_b.pop_head();
         assert!(list_b.is_empty());
         assert_eq!(list_b.len(), 0);
+    }
+
+    #[test]
+    fn test_head_mut() {
+        let mut list = SinglyLinkedList::new(0);
+        list.insert_back(1);
+        if let Some(head_mut) = list.head_mut() {
+            *head_mut = 99;
+        }
+        assert_eq!(list.head(), Some(&99));
+    }
+
+    #[test]
+    fn test_tail_mut() {
+        let mut list = SinglyLinkedList::new(0);
+        list.insert_back(1);
+        if let Some(tail_mut) = list.tail_mut() {
+            *tail_mut = 99;
+        }
+        assert_eq!(list.tail(), Some(&99));
+        println!("{list}");
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut list = SinglyLinkedList::new(0);
+        for v in [1, 2, 3, 4, 5] {
+            list.insert_back(v);
+        }
+
+        let mut list_vec = vec![];
+        let list_expected_vec = vec![0, 1, 2, 3, 4, 5];
+        for &v in list.iter() {
+            list_vec.push(v);
+        }
+
+        assert_eq!(list_vec, list_expected_vec);
+    }
+
+    #[test]
+    fn test_iter_mut() {
+        let multiplier = 10;
+        let values = [0, 1, 2, 3, 4, 5];
+        let expected_vec = values.map(|v| v * multiplier);
+
+        let mut expected_list = SinglyLinkedList::new(expected_vec[0]);
+        for &v in &expected_vec[1..] {
+            expected_list.insert_back(v);
+        }
+
+        let mut list = SinglyLinkedList::new(values[0]);
+        for &v in &values[1..] {
+            list.insert_back(v);
+        }
+
+        let mut list_vec = vec![];
+        for v in &mut list {
+            *v *= multiplier;
+            list_vec.push(*v);
+        }
+
+        assert_eq!(list_vec, expected_vec);
+        assert_eq!(list, expected_list);
     }
 
     #[test]
