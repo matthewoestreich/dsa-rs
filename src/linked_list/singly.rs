@@ -358,7 +358,7 @@ mod test {
         assert_eq!(list.remove(1000000), None);
         assert_eq!(list.len(), 4);
         // Test zero-based indexing
-        assert_eq!(None, list.remove(4));
+        assert_eq!(list.remove(4), None);
         // Test removing by valid index
         assert_eq!(list.remove(3), Some("d"));
         assert_eq!(list.len(), 3);
