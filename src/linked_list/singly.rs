@@ -5,17 +5,18 @@ use std::{
 
 pub struct SinglyLinkedList<T> {
     head: Option<Box<Node<T>>>,
-    size: usize,
+    len: usize,
 }
 
 impl<T> SinglyLinkedList<T> {
     pub fn new(head: T) -> Self {
         Self {
             head: Some(Node::new(head)),
-            size: 1,
+            len: 1,
         }
     }
 
+    /// Returns reference to head.
     pub fn head(&self) -> Option<&T> {
         match self.head.as_ref() {
             Some(h) => Some(&h.value),
@@ -23,6 +24,7 @@ impl<T> SinglyLinkedList<T> {
         }
     }
 
+    /// Returns reference to tail.
     pub fn tail(&self) -> Option<&T> {
         let mut curr = &self.head;
 
@@ -36,27 +38,31 @@ impl<T> SinglyLinkedList<T> {
         None
     }
 
+    /// Removes and returns head. Assigns `popped_head.next` as new head.
     pub fn pop_head(&mut self) -> Option<T> {
-        self.remove_at(0)
+        self.remove(0)
     }
 
+    /// Removes and returns tail. Assigns node that came before popped tail as new tail.
     pub fn pop_tail(&mut self) -> Option<T> {
-        self.remove_at(self.size - 1)
+        self.remove(self.len - 1)
     }
 
-    pub fn insert_first(&mut self, value: T) {
+    /// Inserts new value into linked list at the front (becomes head).
+    pub fn insert_front(&mut self, value: T) {
         let new_head = Node::new_with_next(value, self.head.take());
         self.head = Some(new_head);
-        self.size += 1;
+        self.len += 1;
     }
 
-    pub fn insert_last(&mut self, value: T) {
+    /// Inserts new value into linked list at the end (becomes tail).
+    pub fn insert_back(&mut self, value: T) {
         let mut curr = &mut self.head;
 
         while let Some(curr_node) = curr {
             if curr_node.next.is_none() {
                 curr_node.next = Some(Node::new(value));
-                self.size += 1;
+                self.len += 1;
                 return;
             }
             curr = &mut curr_node.next;
@@ -65,19 +71,19 @@ impl<T> SinglyLinkedList<T> {
 
     /// Indexing is zero based.
     /// If you have 3 elements in your list, the third element will be at index 2.
-    pub fn remove_at(&mut self, index: usize) -> Option<T> {
-        if index >= self.size {
+    pub fn remove(&mut self, index: usize) -> Option<T> {
+        if index >= self.len {
             return None;
         }
 
         let mut i = 0;
         let mut curr = &mut self.head;
 
-        while i < self.size && curr.is_some() {
+        while i < self.len && curr.is_some() {
             if i == index {
                 let rest = curr.take().expect("already checked is_some");
                 *curr = rest.next;
-                self.size -= 1;
+                self.len -= 1;
                 return Some(rest.value);
             }
             i += 1;
@@ -91,8 +97,8 @@ impl<T> SinglyLinkedList<T> {
         self.head.is_none()
     }
 
-    pub fn size(&self) -> usize {
-        self.size
+    pub fn len(&self) -> usize {
+        self.len
     }
 }
 
@@ -103,7 +109,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LinkedList")
             .field("head", &self.head)
-            .field("size", &self.size)
+            .field("size", &self.len)
             .finish()
     }
 }
@@ -133,7 +139,7 @@ where
     T: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        if self.size != other.size {
+        if self.len != other.len {
             return false;
         }
 
@@ -167,7 +173,7 @@ where
 
         let mut this = Self::new(slice[0].clone());
         for v in &slice[1..] {
-            this.insert_last(v.clone());
+            this.insert_back(v.clone());
         }
 
         Ok(this)
@@ -188,7 +194,7 @@ impl<T, const N: usize> TryFrom<[T; N]> for SinglyLinkedList<T> {
 
         let mut this = Self::new(first);
         for item in it {
-            this.insert_last(item);
+            this.insert_back(item);
         }
 
         Ok(this)
@@ -208,7 +214,7 @@ where
 
         let mut this = Self::new(slice[0].clone());
         for v in &slice[1..] {
-            this.insert_last(v.clone());
+            this.insert_back(v.clone());
         }
 
         Ok(this)
@@ -303,46 +309,59 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_insert_first() {
+    fn test_insert_front() {
         let head = 0;
         let mut list = SinglyLinkedList::new(head);
         let new_head = 1;
-        list.insert_first(new_head);
-        list.insert_first(2);
-        assert_eq!(3, list.size());
-        assert_eq!(Some(&2), list.head());
+        list.insert_front(new_head);
+        list.insert_front(2);
+        assert_eq!(list.len(), 3);
+        assert_eq!(list.head(), Some(&2));
     }
 
     #[test]
-    fn test_insert_last() {
+    fn test_insert_back() {
         let mut list = SinglyLinkedList::new(0);
-        list.insert_first(1);
-        list.insert_first(2);
-        list.insert_last(99);
-        assert_eq!(4, list.size());
-        assert_eq!(Some(&99), list.tail());
+        list.insert_front(1);
+        list.insert_front(2);
+        list.insert_back(99);
+        assert_eq!(list.len(), 4);
+        assert_eq!(list.tail(), Some(&99));
+    }
+
+    #[test]
+    fn test_is_empty() {
+        let mut list_a = SinglyLinkedList::new(0);
+        _ = list_a.remove(0);
+        assert!(list_a.is_empty());
+        assert_eq!(list_a.len(), 0);
+
+        let mut list_b = SinglyLinkedList::new(0);
+        _ = list_b.pop_head();
+        assert!(list_b.is_empty());
+        assert_eq!(list_b.len(), 0);
     }
 
     #[test]
     fn test_remove_at() {
         let mut expected_list = SinglyLinkedList::new("a");
         for v in ["b", "c"] {
-            expected_list.insert_last(v);
+            expected_list.insert_back(v);
         }
 
         let mut list = SinglyLinkedList::new("a");
         for v in ["b", "c", "d"] {
-            list.insert_last(v);
+            list.insert_back(v);
         }
 
         // Test out of bounds `remove_at`
-        assert_eq!(None, list.remove_at(1000000));
-        assert_eq!(4, list.size());
+        assert_eq!(list.remove(1000000), None);
+        assert_eq!(list.len(), 4);
         // Test zero-based indexing
-        assert_eq!(None, list.remove_at(4));
+        assert_eq!(None, list.remove(4));
         // Test removing by valid index
-        assert_eq!(Some("d"), list.remove_at(3));
-        assert_eq!(3, list.size());
+        assert_eq!(list.remove(3), Some("d"));
+        assert_eq!(list.len(), 3);
         // Ensure our list is what we expect
         assert_eq!(list, expected_list);
     }
@@ -351,32 +370,31 @@ mod test {
     fn test_pop_head() {
         let mut list = SinglyLinkedList::new(33);
         for v in [34, 67, 22, 90, 81] {
-            list.insert_last(v);
+            list.insert_back(v);
         }
         let head = list.pop_head();
-        assert_eq!(Some(33), head);
+        assert_eq!(head, Some(33));
         // Test if head was updated.
-        assert_eq!(Some(&34), list.head());
-        assert_eq!(Some(&81), list.tail());
+        assert_eq!(list.head(), Some(&34));
+        assert_eq!(list.tail(), Some(&81));
     }
 
     #[test]
     fn test_pop_tail() {
         let mut list = SinglyLinkedList::new(33);
         for v in [34, 67, 22, 90, 81] {
-            list.insert_last(v);
+            list.insert_back(v);
         }
-        let tail = list.pop_tail();
-        assert_eq!(Some(81), tail);
+        assert_eq!(list.pop_tail(), Some(81));
         // Test if tail was updated.
-        assert_eq!(Some(&90), list.tail());
-        assert_eq!(Some(&33), list.head());
+        assert_eq!(list.tail(), Some(&90));
+        assert_eq!(list.head(), Some(&33));
     }
 
     #[test]
     fn test_equality() {
         let mut list_a = SinglyLinkedList::new("a");
-        list_a.insert_last("b");
+        list_a.insert_back("b");
         let list_b = SinglyLinkedList::new("a");
         assert_ne!(list_a, list_b);
 
@@ -384,54 +402,59 @@ mod test {
         let mut list_c = SinglyLinkedList::new(data[0]);
         let mut list_d = SinglyLinkedList::new(data[0]);
         for v in &data[1..] {
-            list_c.insert_last(v);
-            list_d.insert_last(v);
+            list_c.insert_back(v);
+            list_d.insert_back(v);
         }
         assert_eq!(list_c, list_d);
 
-        // Due to how our equality check is written, we
-        // should test for the case where the "left hand side" (a)
-        // has no elements left but the "right hand side" (b) does.
         let mut list_e = SinglyLinkedList::new(0);
-        list_e.insert_last(1);
-        list_e.insert_last(2);
+        list_e.insert_back(1);
+        list_e.insert_back(2);
         let mut list_f = SinglyLinkedList::new(0);
-        list_f.insert_last(1);
-        list_f.insert_last(2);
-        list_f.insert_last(3);
+        list_f.insert_back(1);
+        list_f.insert_back(2);
+        list_f.insert_back(3);
         assert_ne!(list_e, list_f);
 
         let mut list_g = SinglyLinkedList::new(0);
-        list_g.insert_last(1);
-        list_g.insert_last(2);
-        list_g.insert_last(3);
+        list_g.insert_back(1);
+        list_g.insert_back(2);
+        list_g.insert_back(3);
         let mut list_h = SinglyLinkedList::new(0);
-        list_h.insert_last(1);
-        list_h.insert_last(2);
-        list_h.insert_last(99);
+        list_h.insert_back(1);
+        list_h.insert_back(2);
+        list_h.insert_back(99);
         assert_ne!(list_g, list_h);
     }
 
     #[test]
     fn test_try_from() {
         let vec_data = Vec::from(["a", "b", "c", "d", "e", "f"]);
+        let vec_data_len = vec_data.len();
         let vec_list = SinglyLinkedList::try_from(vec_data).expect("no errors");
-        assert_eq!(Some(&"a"), vec_list.head());
-        assert_eq!(Some(&"f"), vec_list.tail());
+        assert_eq!(vec_list.head(), Some(&"a"));
+        assert_eq!(vec_list.tail(), Some(&"f"));
+        assert_eq!(vec_list.len(), vec_data_len);
 
-        let arr_data = ["a", "b", "c", "d", "e", "f"];
+        let arr_data = ["aa", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+        let arr_data_len = arr_data.len();
         let arr_list = SinglyLinkedList::try_from(arr_data).expect("no errors");
-        assert_eq!(Some(&"a"), arr_list.head());
-        assert_eq!(Some(&"f"), arr_list.tail());
+        assert_eq!(arr_list.head(), Some(&"aa"));
+        assert_eq!(arr_list.tail(), Some(&"k"));
+        assert_eq!(arr_list.len(), arr_data_len);
 
-        let arr_ref_data = ["a", "b", "c", "d", "e", "f"];
+        let arr_ref_data = ["aaa", "b", "c", "d"];
+        let arr_ref_data_len = arr_ref_data.len();
         let arr_ref_list = SinglyLinkedList::try_from(&arr_ref_data).expect("no errors");
-        assert_eq!(Some(&"a"), arr_ref_list.head());
-        assert_eq!(Some(&"f"), arr_ref_list.tail());
+        assert_eq!(arr_ref_list.head(), Some(&"aaa"));
+        assert_eq!(arr_ref_list.tail(), Some(&"d"));
+        assert_eq!(arr_ref_list.len(), arr_ref_data_len);
 
-        let slice_data = ["a", "b", "c", "d", "e", "f"];
+        let slice_data = ["aaaa", "b", "c", "d", "e"];
+        let slice_data_len = slice_data.len();
         let slice_list = SinglyLinkedList::try_from(&slice_data[..]).expect("no errors");
-        assert_eq!(Some(&"a"), slice_list.head());
-        assert_eq!(Some(&"f"), slice_list.tail());
+        assert_eq!(slice_list.head(), Some(&"aaaa"));
+        assert_eq!(slice_list.tail(), Some(&"e"));
+        assert_eq!(slice_list.len(), slice_data_len);
     }
 }

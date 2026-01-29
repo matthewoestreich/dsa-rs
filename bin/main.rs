@@ -65,8 +65,8 @@ fn main() {
 
     /* Singly linked list */
     let mut singly_linked_list = SinglyLinkedList::new(0);
-    singly_linked_list.insert_last(1);
-    singly_linked_list.insert_last(2);
+    singly_linked_list.insert_back(1);
+    singly_linked_list.insert_back(2);
     // Returns reference
     _ = singly_linked_list.head();
     // Returns reference
@@ -76,5 +76,5 @@ fn main() {
     // Removes taill in returns it.
     _ = singly_linked_list.pop_tail();
     // Removes element at "index" 1 and returns it (zero based indexing)
-    _ = singly_linked_list.remove_at(1);
+    _ = singly_linked_list.remove(1);
 }
