@@ -354,7 +354,7 @@ mod test {
             list.insert_back(v);
         }
 
-        // Test out of bounds `remove_at`
+        // Test out of bounds `remove`
         assert_eq!(list.remove(1000000), None);
         assert_eq!(list.len(), 4);
         // Test zero-based indexing
