@@ -212,12 +212,12 @@ where
 impl<T, const N: usize> TryFrom<[T; N]> for SinglyLinkedList<T> {
     type Error = SinglyLinkedListError;
 
-    fn try_from(slice: [T; N]) -> Result<Self, Self::Error> {
+    fn try_from(array: [T; N]) -> Result<Self, Self::Error> {
         if N == 0 {
             return Err(SinglyLinkedListError::EmptySource);
         }
 
-        let mut it = slice.into_iter();
+        let mut it = array.into_iter();
         let first = it.next().expect("verified not empty");
 
         let mut this = Self::new(first);
@@ -235,13 +235,13 @@ where
 {
     type Error = SinglyLinkedListError;
 
-    fn try_from(slice: &[T; N]) -> Result<Self, Self::Error> {
-        if slice.is_empty() {
+    fn try_from(array: &[T; N]) -> Result<Self, Self::Error> {
+        if array.is_empty() {
             return Err(SinglyLinkedListError::EmptySource);
         }
 
-        let mut this = Self::new(slice[0].clone());
-        for v in &slice[1..] {
+        let mut this = Self::new(array[0].clone());
+        for v in &array[1..] {
             this.insert_back(v.clone());
         }
 
