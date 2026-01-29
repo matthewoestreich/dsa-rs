@@ -82,6 +82,7 @@ mod test {
         assert_eq!(queue.len(), 1);
 
         _ = queue.dequeue();
+        assert_eq!(queue.len(), 0);
         assert!(queue.is_empty());
 
         let dequeue_from_empty = queue.dequeue();
