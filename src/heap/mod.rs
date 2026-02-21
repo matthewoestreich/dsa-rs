@@ -398,13 +398,13 @@ mod test {
         assert_eq!(heap.nodes.clone(), collected);
 
         // Test mutable iteration.
-        let multiplyer = 10;
+        let multiplier = 10;
         let mut heap_clone_for_mut_iter = heap.clone();
         let mut vals_clone: Vec<_> = values.clone();
-        vals_clone.iter_mut().for_each(|v| v.id *= multiplyer);
+        vals_clone.iter_mut().for_each(|v| v.id *= multiplier);
         vals_clone.sort();
         for el in &mut heap_clone_for_mut_iter {
-            el.id *= multiplyer;
+            el.id *= multiplier;
         }
         assert_eq!(vals_clone, heap_clone_for_mut_iter.to_sorted_vec());
 
