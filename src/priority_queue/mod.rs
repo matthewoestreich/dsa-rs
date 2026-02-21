@@ -429,9 +429,9 @@ mod test {
         // Test to_vec
         let mut values_clone_to_vec = values.clone();
         values_clone_to_vec.sort_by(|a, b| b.cmp(a));
-        let min_queue_vals_to_vec: Vec<_> =
+        let max_queue_vals_to_vec: Vec<_> =
             max_queue.to_sorted_vec().iter().map(|t| t.char).collect();
-        assert_eq!(values_clone_to_vec, min_queue_vals_to_vec);
+        assert_eq!(values_clone_to_vec, max_queue_vals_to_vec);
 
         // Test front
         let front = max_queue.front().expect("some");
