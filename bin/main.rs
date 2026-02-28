@@ -1,6 +1,13 @@
 use std::cmp::Ordering;
 
-use dsa_rs::{Heap, PriorityQueue, SinglyLinkedList, Trie, binary_tree};
+use dsa_rs::{
+    binary_search::{self, Ordering as BSOrdering},
+    binary_tree,
+    heap::Heap,
+    linked_list::SinglyLinkedList,
+    priority_queue::PriorityQueue,
+    trie::Trie,
+};
 
 fn main() {
     /* Binary Tree */
@@ -77,4 +84,63 @@ fn main() {
     _ = singly_linked_list.pop_tail();
     // Removes element at "index" 1 and returns it (zero based indexing)
     _ = singly_linked_list.remove(1);
+
+    /* Binary search */
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+    struct User {
+        name: String,
+        id: u32,
+    }
+
+    let mut users = [
+        User {
+            name: "John".to_string(),
+            id: 1,
+        },
+        User {
+            name: "Amy".to_string(),
+            id: 2,
+        },
+        User {
+            name: "Malcolm".to_string(),
+            id: 123,
+        },
+        User {
+            name: "Bob".to_string(),
+            id: 99,
+        },
+        User {
+            name: "Kyla".to_string(),
+            id: 47,
+        },
+        User {
+            name: "Hope".to_string(),
+            id: 87,
+        },
+    ];
+
+    let target_user = User {
+        name: "Kyla".to_string(),
+        id: 47,
+    };
+
+    // Ascending binary search
+    users.sort();
+    println!("[binary_search] users in ascending order : {users:?}");
+    if let Some(found_index) = binary_search::find(&users, BSOrdering::Ascending, &target_user) {
+        println!(
+            "[binary_search][ascending] found at index : {found_index} : {:?}",
+            &users[found_index]
+        );
+    }
+
+    // Descending binary search
+    users.reverse();
+    println!("[binary_search] users in descending order : {users:?}");
+    if let Some(found_index) = binary_search::find(&users, BSOrdering::Descending, &target_user) {
+        println!(
+            "[binary_search][descending] found at index : {found_index} : {:?}",
+            &users[found_index]
+        );
+    }
 }
