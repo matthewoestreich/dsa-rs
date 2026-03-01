@@ -5,20 +5,20 @@ pub enum Ordering {
     Descending,
 }
 
-/// Assumes `elements` are already sorted!!!
+/// Assumes `slice` is already sorted!!!
 /// Returns the index of target, if found.
-pub fn find<T>(elements: &[T], elements_order: Ordering, target: &T) -> Option<usize>
+pub fn find<T>(slice: &[T], slice_order: Ordering, target: &T) -> Option<usize>
 where
-    T: PartialEq + Eq + PartialOrd + Ord,
+    T: Ord,
 {
     let mut left = 0;
-    let mut right = elements.len();
+    let mut right = slice.len();
 
     while left < right {
         let mid = left + (right - left) / 2;
-        let candidate = &elements[mid];
+        let candidate = &slice[mid];
 
-        let ordering = match elements_order {
+        let ordering = match slice_order {
             Ordering::Ascending => candidate.cmp(target),
             Ordering::Descending => candidate.cmp(target).reverse(),
         };
@@ -45,6 +45,7 @@ where
     }
 }
 
+// Blanket impl of BinarySearch
 impl<T, C> BinarySearch<T> for C
 where
     T: Ord,
