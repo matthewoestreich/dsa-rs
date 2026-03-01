@@ -16,7 +16,11 @@ impl<T> Queue<T> {
     }
 
     pub fn dequeue(&mut self) -> Option<T> {
-        self.fill_outbox();
+        if self.outbox.is_empty() {
+            while let Some(e) = self.inbox.pop() {
+                self.outbox.push(e);
+            }
+        }
         self.outbox.pop()
     }
 
@@ -34,14 +38,6 @@ impl<T> Queue<T> {
 
     pub fn is_empty(&self) -> bool {
         self.inbox.is_empty() && self.outbox.is_empty()
-    }
-
-    fn fill_outbox(&mut self) {
-        if self.outbox.is_empty() {
-            while let Some(e) = self.inbox.pop() {
-                self.outbox.push(e);
-            }
-        }
     }
 }
 
