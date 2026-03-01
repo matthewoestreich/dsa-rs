@@ -5,7 +5,7 @@ pub enum Ordering {
     Descending,
 }
 
-/// Assumes `elements` are already sorted order!!!
+/// Assumes `elements` are already sorted!!!
 /// Returns the index of target, if found.
 pub fn find<T>(elements: &[T], elements_order: Ordering, target: &T) -> Option<usize>
 where
@@ -17,10 +17,12 @@ where
     while left < right {
         let mid = left + (right - left) / 2;
         let candidate = &elements[mid];
+
         let ordering = match elements_order {
             Ordering::Ascending => candidate.cmp(target),
             Ordering::Descending => candidate.cmp(target).reverse(),
         };
+
         match ordering {
             cmp::Ordering::Less => left = mid + 1,
             cmp::Ordering::Greater => right = mid,
@@ -29,6 +31,25 @@ where
     }
 
     None
+}
+
+// *************** BinarySearch trait ************************************************
+
+pub trait BinarySearch<T>
+where
+    Self: AsRef<[T]>,
+    T: Ord,
+{
+    fn find_binary_search(&self, arr_order: Ordering, target: &T) -> Option<usize> {
+        find(self.as_ref(), arr_order, target)
+    }
+}
+
+impl<T, C> BinarySearch<T> for C
+where
+    T: Ord,
+    C: AsRef<[T]>,
+{
 }
 
 #[cfg(test)]
@@ -137,5 +158,60 @@ mod tests {
             find(&v, Ordering::Ascending, &String::from("banana")),
             Some(1)
         );
+    }
+
+    #[test]
+    fn binary_search_trait() {
+        use Ordering as Ord;
+
+        let arr_asc = [1, 3, 5, 7, 9];
+        let arr_desc = [9, 7, 5, 3, 1];
+
+        // Helper to test a container that implements BinarySearch
+        fn test_container<C>(ctr: C, order: Ordering)
+        where
+            C: BinarySearch<i32>,
+        {
+            match order {
+                Ord::Ascending => {
+                    assert_eq!(ctr.find_binary_search(Ord::Ascending, &1), Some(0));
+                    assert_eq!(ctr.find_binary_search(Ord::Ascending, &5), Some(2));
+                    assert_eq!(ctr.find_binary_search(Ord::Ascending, &9), Some(4));
+                    assert_eq!(ctr.find_binary_search(Ord::Ascending, &10), None);
+                }
+                Ord::Descending => {
+                    assert_eq!(ctr.find_binary_search(Ord::Descending, &9), Some(0));
+                    assert_eq!(ctr.find_binary_search(Ord::Descending, &5), Some(2));
+                    assert_eq!(ctr.find_binary_search(Ord::Descending, &1), Some(4));
+                    assert_eq!(ctr.find_binary_search(Ord::Descending, &0), None);
+                }
+            }
+        }
+
+        // Slices
+        test_container(&arr_asc[..], Ord::Ascending);
+        test_container(&arr_desc[..], Ord::Descending);
+
+        // Mutable slices
+        let mut arr_asc_mut = arr_asc;
+        let mut arr_desc_mut = arr_desc;
+        test_container(&mut arr_asc_mut[..], Ord::Ascending);
+        test_container(&mut arr_desc_mut[..], Ord::Descending);
+
+        // Vec
+        let vec_asc = arr_asc.to_vec();
+        let vec_desc = arr_desc.to_vec();
+        test_container(vec_asc, Ord::Ascending);
+        test_container(vec_desc, Ord::Descending);
+
+        // Arrays
+        test_container(arr_asc, Ord::Ascending);
+        test_container(arr_desc, Ord::Descending);
+        // Box
+
+        let boxed_asc: Box<[i32]> = arr_asc.to_vec().into_boxed_slice();
+        let boxed_desc: Box<[i32]> = arr_desc.to_vec().into_boxed_slice();
+        test_container(boxed_asc, Ord::Ascending);
+        test_container(boxed_desc, Ord::Descending);
     }
 }

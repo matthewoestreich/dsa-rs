@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use dsa_rs::{
-    binary_search::{self, Ordering as BSOrdering},
+    binary_search::{self, BinarySearch as _, Ordering as BSOrdering},
     binary_tree,
     heap::Heap,
     linked_list::SinglyLinkedList,
@@ -140,6 +140,14 @@ fn main() {
     if let Some(found_index) = binary_search::find(&users, BSOrdering::Descending, &target_user) {
         println!(
             "[binary_search][descending] found at index : {found_index} : {:?}",
+            &users[found_index]
+        );
+    }
+
+    // Using BinarySearch trait
+    if let Some(found_index) = users.find_binary_search(BSOrdering::Descending, &target_user) {
+        println!(
+            "[binary_search][descending][using BinarySearch trait] found at index : {found_index} : {:?}",
             &users[found_index]
         );
     }
