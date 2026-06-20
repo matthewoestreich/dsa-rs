@@ -1,5 +1,7 @@
 pub mod binary_search;
 pub mod binary_tree;
+pub mod bst_traversal;
+pub mod dynamic_programming;
 pub mod heap;
 pub mod linked_list;
 pub mod priority_queue;
